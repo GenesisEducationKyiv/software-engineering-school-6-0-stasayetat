@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GitHub Release Notifier</title>
+  <style>
+    body { font-family: sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; }
+    h1 { font-size: 1.4rem; margin-bottom: 24px; }
+    label { display: block; margin-bottom: 4px; font-size: 14px; color: #555; }
+    input { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 16px; box-sizing: border-box; font-size: 14px; }
+    button { background: #2da44e; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    button:hover { background: #2c974b; }
+    #response { margin-top: 24px; padding: 12px; border-radius: 6px; font-size: 14px; display: none; }
+
+  </style>
+</head>
+<body>
+<h1>Subscribe to GitHub Release Notifications</h1>
+
+<label>Email</label>
+<input type="email" id="email" placeholder="email@example.com" />
+
+<label>Repository (owner/repo)</label>
+<input type="text" id="repo" placeholder="facebook/react" />
+
+<button onclick="subscribe()">Subscribe</button>
+
+<div id="response"></div>
+
+<script>
+  const API_URL = '__API_URL__';
+  const API_KEY = '__API_KEY__';
+
+  async function subscribe() {
+    const email = document.getElementById('email').value;
+    const repo = document.getElementById('repo').value;
+    const responseDiv = document.getElementById('response');
+
+    try {
+      const res = await fetch(`${API_URL}/api/subscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': API_KEY,
+        },
+        body: JSON.stringify({ email, repo }),
+      });
+
+      const data = await res.json();
+
+      responseDiv.style.display = 'block';
+      responseDiv.className = res.ok ? 'success' : 'error';
+      responseDiv.textContent = data.message;
+    } catch (err) {
+      responseDiv.style.display = 'block';
+      responseDiv.className = 'error';
+      responseDiv.textContent = 'Something went wrong. Please try again.';
+    }
+  }
+</script>
+</body>
+</html>

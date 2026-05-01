@@ -1,0 +1,8 @@
+.build/
+.github/
+.husky
+.vscode/
+localRun/
+**/node_modules/
+/.build/
+/.idea/

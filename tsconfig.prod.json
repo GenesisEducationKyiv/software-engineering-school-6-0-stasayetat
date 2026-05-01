@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./.build",
+    "sourceMap": false,
+    "incremental": false,
+    "types": [],
+    "paths": {
+      "@shared/*": ["./src/shared/*"],
+      "@modules/*": ["./src/modules/*"]
+    }
+  },
+  "exclude": [
+    ".build",
+    "tests",
+    "vitest.int.config.ts",
+    "vitest.unit.config.ts",
+    "drizzle.config.ts",
+    "eslint.config.ts"
+  ]
+}
