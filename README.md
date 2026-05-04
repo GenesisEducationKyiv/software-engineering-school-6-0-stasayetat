@@ -7,8 +7,8 @@ A service that monitors GitHub repositories for new releases and notifies subscr
 **Requirements:** Node.js 22, pnpm 10, Docker
 
 ```bash
-git clone https://github.com/stasayetat/sy-github-notifier.git
-cd sy-github-notifier
+git clone https://github.com/GenesisEducationKyiv/software-engineering-school-6-0-stasayetat.git
+cd software-engineering-school-6-0-stasayetat
 pnpm install
 cp profiles/.env.example profiles/.env.development.local
 docker compose up -d postgres redis mailpit
