@@ -47,6 +47,7 @@ export default defineConfig([
       'unused-imports/no-unused-imports': 'error',
 
       // typescript
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/require-await': 'error',
