@@ -48,6 +48,7 @@ export default defineConfig([
 
       // typescript
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-namespace': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/require-await': 'error',
