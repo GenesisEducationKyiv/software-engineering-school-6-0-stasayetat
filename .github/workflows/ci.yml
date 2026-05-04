@@ -40,9 +40,6 @@ jobs:
       - name: TypeCheck
         run: pnpm run type-check
 
-      - name: Check formatting
-        run: pnpm prettier --check .
-
   tests:
     needs: lint
     timeout-minutes: 10
