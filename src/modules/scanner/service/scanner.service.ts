@@ -129,9 +129,9 @@ export class ScannerService {
       { successful: [], failed: [] },
     );
 
-    failed.forEach(({ currentRepo, error }) => {
+    for (const { currentRepo, error } of failed) {
       logger.warn(`Failed to fetch repo ${currentRepo.repo}: ${error.message}`);
-    });
+    }
 
     return successful;
   }

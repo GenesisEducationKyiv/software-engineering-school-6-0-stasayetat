@@ -35,7 +35,6 @@ export default defineConfig([
       'brace-style': ['error', '1tbs', { allowSingleLine: false }],
       'no-constant-condition': ['error', { checkLoops: false }],
       'object-shorthand': 'error',
-      'no-unsafe-finally': 'off',
       'implicit-arrow-linebreak': 'warn',
 
       // imports
@@ -48,11 +47,9 @@ export default defineConfig([
       'unused-imports/no-unused-imports': 'error',
 
       // typescript
-      '@typescript-eslint/ban-ts-comment': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
-      '@typescript-eslint/no-empty-interface': 'off',
       '@typescript-eslint/no-namespace': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', { varsIgnorePattern: '^_', argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/require-await': 'error',
       '@typescript-eslint/return-await': ['error', 'always'],
@@ -76,6 +73,14 @@ export default defineConfig([
         { blankLine: 'always', prev: 'block-like', next: '*' },
         { blankLine: 'always', prev: '*', next: 'block-like' },
       ],
+
+      '@typescript-eslint/no-for-in-array': 'error',
+      'no-restricted-syntax': ['error',
+        {
+          selector: 'CallExpression[callee.property.name="forEach"]',
+          message: 'Prefer for...of instead of .forEach()',
+        },
+      ],
     },
     settings: {
       'import/resolver': {
@@ -88,7 +93,7 @@ export default defineConfig([
   },
 
   {
-    files: ['**/*.spec.ts', '**/*.test.ts'],
+    files: ['**/*.test.ts'],
     rules: {
       'import/no-internal-modules': 'off',
       '@typescript-eslint/unbound-method': 'off',
