@@ -142,3 +142,25 @@ Run a real PostgreSQL and Redis using testcontainers and test full subscription 
 
 - CI runs on every push (linting, type-check, tests)
 - Prometheus metrics
+
+## Database Schema
+
+repos
+
+| Column         | Type      | Constraints                  |
+  |----------------|-----------|------------------------------|
+| id             | uuid      | PK, auto-generated           |
+| repo           | text      | NOT NULL, UNIQUE             |
+| last_seen_tag  | text      | NOT NULL                     |
+| checked_at     | timestamp | NOT NULL, default now        |
+
+subscriptions
+
+| Column      | Type      | Constraints                          |
+  |-------------|-----------|--------------------------------------|
+| id          | uuid      | PK, auto-generated                   |
+| email       | text      | NOT NULL                             |
+| repo_id     | uuid      | FK → repos.id, CASCADE DELETE        |
+| token       | uuid      | NOT NULL, auto-generated             |
+| confirmed   | boolean   | NOT NULL, default false              |
+| created_at  | timestamp | NOT NULL, default now                |
