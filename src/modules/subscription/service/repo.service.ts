@@ -1,4 +1,4 @@
-import { RepoRepository } from '@modules/subscription/repository/repo.repository';
+import { IRepoRepository, REPO_REPOSITORY } from '@modules/subscription/repository/repo.repository.interface';
 import { TagFetcher, TAGS_FETCHER } from '@shared/apis/tags-fetcher.interface';
 import { logger } from '@shared/logger';
 import { totalReposCount } from '@shared/metrics';
@@ -9,7 +9,7 @@ import { inject, injectable } from 'tsyringe';
 @injectable()
 export class RepoService {
   constructor(
-    private readonly repoRepository: RepoRepository,
+    @inject(REPO_REPOSITORY) private readonly repoRepository: IRepoRepository,
     @inject(TAGS_FETCHER) private readonly repoTagFetcher: TagFetcher,
   ) {}
 

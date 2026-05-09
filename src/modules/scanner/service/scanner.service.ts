@@ -1,23 +1,26 @@
 import { RepoTagFetcher } from '@modules/scanner/service/repo-tag.fetcher';
+import { IRepoRepository, REPO_REPOSITORY } from '@modules/subscription/repository/repo.repository.interface';
+import {
+  ISubscriptionRepository,
+  SUBSCRIPTION_REPOSITORY,
+} from '@modules/subscription/repository/subscription.repository.interface';
 import { NotificationEmailService } from '@shared/email';
 import { logger } from '@shared/logger';
 import { scannerRunDuration } from '@shared/metrics';
 import { E, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { getErrorMessage } from '@shared/utils';
-import { injectable } from 'tsyringe';
+import { inject, injectable } from 'tsyringe';
 
-import { RepoRepository } from '../../subscription/repository/repo.repository';
-import { SubscriptionRepository } from '../../subscription/repository/subscription.repository';
 import { RepoNotifyInfo, RepoScanError, RepoScanSuccess } from '../scanner.types';
 import { hasNewRelease } from '../scanner.utils';
 
 @injectable()
 export class ScannerService {
   constructor(
-    private readonly repoRepository: RepoRepository,
+    @inject(REPO_REPOSITORY) private readonly repoRepository: IRepoRepository,
     private readonly repoTagFetcher: RepoTagFetcher,
-    private readonly subscriptionRepository: SubscriptionRepository,
+    @inject(SUBSCRIPTION_REPOSITORY) private readonly subscriptionRepository: ISubscriptionRepository,
     private readonly notifierService: NotificationEmailService,
   ) {}
 

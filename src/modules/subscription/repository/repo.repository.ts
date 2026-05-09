@@ -3,8 +3,10 @@ import { Repository } from '@shared/types/repository.types';
 import { eq } from 'drizzle-orm';
 import { injectable } from 'tsyringe';
 
+import { IRepoRepository } from './repo.repository.interface';
+
 @injectable()
-export class RepoRepository {
+export class RepoRepository implements IRepoRepository {
   async findByRepo(repo: string): Promise<Repository | null> {
     const [found] = await db.select().from(repos).where(eq(repos.repo, repo)).limit(1);
 

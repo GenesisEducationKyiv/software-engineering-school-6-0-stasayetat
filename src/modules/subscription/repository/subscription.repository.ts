@@ -3,8 +3,10 @@ import { Subscription } from '@shared/types';
 import { and, eq, inArray } from 'drizzle-orm';
 import { injectable } from 'tsyringe';
 
+import { ISubscriptionRepository } from './subscription.repository.interface';
+
 @injectable()
-export class SubscriptionRepository {
+export class SubscriptionRepository implements ISubscriptionRepository {
   async createNewSubscription(email: string, repoId: string) {
     const [newSubscription] = await db.insert(subscriptions).values({ email, repoId }).returning();
 

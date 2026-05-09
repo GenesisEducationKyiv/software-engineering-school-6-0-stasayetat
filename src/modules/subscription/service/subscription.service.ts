@@ -1,17 +1,19 @@
+import {
+  ISubscriptionRepository,
+  SUBSCRIPTION_REPOSITORY,
+} from '@modules/subscription/repository/subscription.repository.interface';
 import { RepoService } from '@modules/subscription/service/repo.service';
 import { NotificationEmailService } from '@shared/email';
 import { logger } from '@shared/logger';
 import { activeSubscriptionCount, subscriptionsTotal } from '@shared/metrics';
 import { ApiResponse, E, GetSubscriptionsResponse, MinifiedSubscription, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
-import { injectable } from 'tsyringe';
-
-import { SubscriptionRepository } from '../repository/subscription.repository';
+import { inject, injectable } from 'tsyringe';
 
 @injectable()
 export class SubscriptionService {
   constructor(
-    private readonly subscriptionRepository: SubscriptionRepository,
+    @inject(SUBSCRIPTION_REPOSITORY) private readonly subscriptionRepository: ISubscriptionRepository,
     private readonly notificationEmailService: NotificationEmailService,
     private readonly repoService: RepoService,
   ) {}

@@ -1,7 +1,9 @@
 import { RepoTagFetcher } from '@modules/scanner/service/repo-tag.fetcher';
 import { ScannerService } from '@modules/scanner/service/scanner.service';
 import { RepoRepository } from '@modules/subscription/repository/repo.repository';
+import { REPO_REPOSITORY } from '@modules/subscription/repository/repo.repository.interface';
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
+import { SUBSCRIPTION_REPOSITORY } from '@modules/subscription/repository/subscription.repository.interface';
 import { RepoService } from '@modules/subscription/service/repo.service';
 import { SubscriptionService } from '@modules/subscription/service/subscription.service';
 import { GithubApiClient } from '@shared/apis';
@@ -19,8 +21,8 @@ if (env.NODE_ENV === 'production') {
   container.registerSingleton(EMAIL_SENDER, SmtpEmailSender);
 }
 
-container.registerSingleton(RepoRepository);
-container.registerSingleton(SubscriptionRepository);
+container.registerSingleton(REPO_REPOSITORY, RepoRepository);
+container.registerSingleton(SUBSCRIPTION_REPOSITORY, SubscriptionRepository);
 container.registerSingleton(RepoTagFetcher);
 container.registerSingleton(NotificationEmailService);
 container.registerSingleton(RepoService);
