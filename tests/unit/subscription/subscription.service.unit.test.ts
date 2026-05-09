@@ -31,8 +31,8 @@ describe('SubscriptionService', () => {
     vi.resetAllMocks();
 
     subscriptionRepository = new SubscriptionRepository() as MockedObject<SubscriptionRepository>;
-    repoService = new RepoService() as MockedObject<RepoService>;
-    notificationEmailService = new NotificationEmailService() as MockedObject<NotificationEmailService>;
+    repoService = new RepoService({} as any, {} as any) as MockedObject<RepoService>;
+    notificationEmailService = new NotificationEmailService({} as any) as MockedObject<NotificationEmailService>;
 
     vi.spyOn(subscriptionRepository, 'getSubscriptionByEmailAndRepoId').mockResolvedValue(null);
     vi.spyOn(subscriptionRepository, 'createNewSubscription').mockResolvedValue(mockSubscription);

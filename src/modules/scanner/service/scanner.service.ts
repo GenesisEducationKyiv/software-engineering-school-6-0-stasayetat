@@ -5,18 +5,20 @@ import { scannerRunDuration } from '@shared/metrics';
 import { E, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { getErrorMessage } from '@shared/utils';
+import { injectable } from 'tsyringe';
 
 import { RepoRepository } from '../../subscription/repository/repo.repository';
 import { SubscriptionRepository } from '../../subscription/repository/subscription.repository';
 import { RepoNotifyInfo, RepoScanError, RepoScanSuccess } from '../scanner.types';
 import { hasNewRelease } from '../scanner.utils';
 
+@injectable()
 export class ScannerService {
   constructor(
-    private readonly repoRepository = new RepoRepository(),
-    private readonly repoTagFetcher = new RepoTagFetcher(),
-    private readonly subscriptionRepository = new SubscriptionRepository(),
-    private readonly notifierService = new NotificationEmailService(),
+    private readonly repoRepository: RepoRepository,
+    private readonly repoTagFetcher: RepoTagFetcher,
+    private readonly subscriptionRepository: SubscriptionRepository,
+    private readonly notifierService: NotificationEmailService,
   ) {}
 
   async run(): Promise<void> {

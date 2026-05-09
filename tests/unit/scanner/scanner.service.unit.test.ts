@@ -33,9 +33,9 @@ describe('ScannerService', () => {
     vi.clearAllMocks();
 
     repoRepository = new RepoRepository() as MockedObject<RepoRepository>;
-    repoTagFetcher = new RepoTagFetcher() as MockedObject<RepoTagFetcher>;
+    repoTagFetcher = new RepoTagFetcher({} as any) as MockedObject<RepoTagFetcher>;
     subscriptionRepository = new SubscriptionRepository() as MockedObject<SubscriptionRepository>;
-    notifierService = new NotificationEmailService() as MockedObject<NotificationEmailService>;
+    notifierService = new NotificationEmailService({} as any) as MockedObject<NotificationEmailService>;
 
     vi.spyOn(repoRepository, 'getAllRepos').mockResolvedValue([]);
     vi.spyOn(repoRepository, 'updateLastSeenTag').mockResolvedValue(undefined);

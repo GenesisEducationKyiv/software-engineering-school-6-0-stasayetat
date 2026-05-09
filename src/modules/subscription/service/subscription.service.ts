@@ -4,14 +4,16 @@ import { logger } from '@shared/logger';
 import { activeSubscriptionCount, subscriptionsTotal } from '@shared/metrics';
 import { ApiResponse, E, GetSubscriptionsResponse, MinifiedSubscription, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
+import { injectable } from 'tsyringe';
 
 import { SubscriptionRepository } from '../repository/subscription.repository';
 
+@injectable()
 export class SubscriptionService {
   constructor(
-    private readonly subscriptionRepository = new SubscriptionRepository(),
-    private readonly notificationEmailService = new NotificationEmailService(),
-    private readonly repoService = new RepoService(),
+    private readonly subscriptionRepository: SubscriptionRepository,
+    private readonly notificationEmailService: NotificationEmailService,
+    private readonly repoService: RepoService,
   ) {}
 
   async subscribe(email: string, repo: string): Promise<ApiResponse> {

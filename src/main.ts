@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import './container';
 import './modules/scanner/scanner.cron-controller';
 
 import { db, repos, subscriptions } from '@shared/db';

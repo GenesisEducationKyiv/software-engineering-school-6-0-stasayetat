@@ -1,7 +1,9 @@
 import { db, repos } from '@shared/db';
 import { Repository } from '@shared/types/repository.types';
 import { eq } from 'drizzle-orm';
+import { injectable } from 'tsyringe';
 
+@injectable()
 export class RepoRepository {
   async findByRepo(repo: string): Promise<Repository | null> {
     const [found] = await db.select().from(repos).where(eq(repos.repo, repo)).limit(1);

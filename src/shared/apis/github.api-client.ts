@@ -1,3 +1,4 @@
+import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { env } from '@shared/env';
 import { logger } from '@shared/logger';
 import { githubApiDuration, githubApiRequestsTotal } from '@shared/metrics/github.metrics';
@@ -7,11 +8,13 @@ import { getErrorMessage } from '@shared/utils';
 import { resolveRetryAfterMs } from '@shared/utils/github.utils';
 import axios, { AxiosRequestConfig } from 'axios';
 import ms from 'ms';
+import { injectable } from 'tsyringe';
 
-export namespace GithubApiClient {
-  const baseUrl = 'https://api.github.com';
+@injectable()
+export class GithubApiClient implements TagFetcher {
+  private readonly baseUrl = 'https://api.github.com';
 
-  const GITHUB_AUTH_HEADERS: AxiosRequestConfig = {
+  private readonly GITHUB_AUTH_HEADERS: AxiosRequestConfig = {
     validateStatus: status => [200, 404, 429].includes(status),
     headers: {
       Accept: 'application/vnd.github+json',
@@ -20,20 +23,20 @@ export namespace GithubApiClient {
     },
   };
 
-  export const getTags = (repo: string): Promise<E.Either<ApiResponse, TagsResponse>> => {
+  getTags = (repo: string): Promise<E.Either<ApiResponse, TagsResponse>> => {
     return getOrSet(
       `github:tags:${repo}`,
       ms('10 minutes'),
-      () => getSimple<TagsResponse>(`/repos/${repo}/tags`),
+      () => this.getSimple<TagsResponse>(`/repos/${repo}/tags`),
       either => E.isRight(either),
     );
   };
 
-  const getSimple = async <T>(path: string): Promise<E.Either<ApiResponse, T>> => {
+  getSimple = async <T>(path: string): Promise<E.Either<ApiResponse, T>> => {
     const end = githubApiDuration.startTimer();
 
     try {
-      const response = await axios.get<T>(baseUrl + path, GITHUB_AUTH_HEADERS);
+      const response = await axios.get<T>(this.baseUrl + path, this.GITHUB_AUTH_HEADERS);
 
       if (response.status === 429) {
         const retryAfterMs = resolveRetryAfterMs(response);

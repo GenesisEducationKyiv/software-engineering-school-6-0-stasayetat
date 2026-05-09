@@ -1,7 +1,9 @@
 import { db, repos, subscriptions } from '@shared/db';
 import { Subscription } from '@shared/types';
 import { and, eq, inArray } from 'drizzle-orm';
+import { injectable } from 'tsyringe';
 
+@injectable()
 export class SubscriptionRepository {
   async createNewSubscription(email: string, repoId: string) {
     const [newSubscription] = await db.insert(subscriptions).values({ email, repoId }).returning();

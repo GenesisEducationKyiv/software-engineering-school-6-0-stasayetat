@@ -2,17 +2,11 @@ import { ScannerService } from '@modules/scanner';
 import { RepoTagFetcher } from '@modules/scanner/service/repo-tag.fetcher';
 import { RepoRepository } from '@modules/subscription/repository/repo.repository';
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
-import { GithubApiClient } from '@shared/apis/github.api-client';
+import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
 import { E, TagsResponse } from '@shared/types';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-vi.mock('@shared/apis/github.api-client', () => ({
-  GithubApiClient: {
-    getTags: vi.fn(),
-  },
-}));
 
 const mockNotifierService = {
   sendConfirmationEmail: vi.fn().mockResolvedValue(undefined),
@@ -33,6 +27,7 @@ const seedConfirmedSubscription = async (email: string, repoId: string) => {
 
 describe('ScannerService (integration)', () => {
   let service: ScannerService;
+  let mockTagFetcher: TagFetcher;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -40,9 +35,13 @@ describe('ScannerService (integration)', () => {
     await db.delete(subscriptions);
     await db.delete(repos);
 
+    mockTagFetcher = {
+      getTags: vi.fn(),
+    };
+
     service = new ScannerService(
       new RepoRepository(),
-      new RepoTagFetcher(),
+      new RepoTagFetcher(mockTagFetcher),
       new SubscriptionRepository(),
       mockNotifierService as any,
     );
@@ -59,7 +58,7 @@ describe('ScannerService (integration)', () => {
       const repo = await seedRepo('facebook/react', 'v1.0.0');
       await seedConfirmedSubscription('test@gmail.com', repo.id);
 
-      vi.mocked(GithubApiClient.getTags).mockResolvedValue(
+      vi.mocked(mockTagFetcher.getTags).mockResolvedValue(
         E.right([{ name: 'v1.0.0' }] as TagsResponse),
       );
 
@@ -75,7 +74,7 @@ describe('ScannerService (integration)', () => {
       const repo = await seedRepo('facebook/react', 'v1.0.0');
       await seedConfirmedSubscription('test@gmail.com', repo.id);
 
-      vi.mocked(GithubApiClient.getTags).mockResolvedValue(
+      vi.mocked(mockTagFetcher.getTags).mockResolvedValue(
         E.right([{ name: 'v2.0.0' }] as TagsResponse),
       );
 
@@ -97,7 +96,7 @@ describe('ScannerService (integration)', () => {
       await seedConfirmedSubscription('user1@gmail.com', repo.id);
       await seedConfirmedSubscription('user2@gmail.com', repo.id);
 
-      vi.mocked(GithubApiClient.getTags).mockResolvedValue(
+      vi.mocked(mockTagFetcher.getTags).mockResolvedValue(
         E.right([{ name: 'v2.0.0' }] as TagsResponse),
       );
 
@@ -112,7 +111,7 @@ describe('ScannerService (integration)', () => {
       await seedConfirmedSubscription('test@gmail.com', repo1.id);
       await seedConfirmedSubscription('test@gmail.com', repo2.id);
 
-      vi.mocked(GithubApiClient.getTags)
+      vi.mocked(mockTagFetcher.getTags)
         .mockResolvedValueOnce(E.left({ status: 500, message: 'Error' }))
         .mockResolvedValueOnce(E.right([{ name: 'v5.0.0' }] as TagsResponse));
 
@@ -134,7 +133,7 @@ describe('ScannerService (integration)', () => {
       const repo = await seedRepo('facebook/react', 'v1.0.0');
       await db.insert(subscriptions).values({ email: 'test@gmail.com', repoId: repo.id, confirmed: false });
 
-      vi.mocked(GithubApiClient.getTags).mockResolvedValue(
+      vi.mocked(mockTagFetcher.getTags).mockResolvedValue(
         E.right([{ name: 'v2.0.0' }] as TagsResponse),
       );
 

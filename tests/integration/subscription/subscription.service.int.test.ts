@@ -1,19 +1,15 @@
+import { RepoRepository } from '@modules/subscription/repository/repo.repository';
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
 import { RepoService } from '@modules/subscription/service/repo.service';
 import { SubscriptionService } from '@modules/subscription/service/subscription.service';
-import { GithubApiClient } from '@shared/apis/github.api-client';
+import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
 import { E, TagsResponse } from '@shared/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@shared/apis/github.api-client', () => ({
-  GithubApiClient: {
-    getTags: vi.fn(),
-  },
-}));
-
 describe('SubscriptionService (integration)', () => {
   let service: SubscriptionService;
+  let mockTagFetcher: TagFetcher;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -21,9 +17,9 @@ describe('SubscriptionService (integration)', () => {
     await db.delete(subscriptions);
     await db.delete(repos);
 
-    vi.mocked(GithubApiClient.getTags).mockResolvedValue(
-      E.right([{ name: 'v1.0.0' } ] as TagsResponse),
-    );
+    mockTagFetcher = {
+      getTags: vi.fn().mockResolvedValue(E.right([{ name: 'v1.0.0' }] as TagsResponse)),
+    };
 
     const mockEmailService = {
       sendConfirmationEmail: vi.fn().mockResolvedValue(E.right({ success: true })),
@@ -33,7 +29,7 @@ describe('SubscriptionService (integration)', () => {
     service = new SubscriptionService(
       new SubscriptionRepository(),
       mockEmailService as any,
-      new RepoService(),
+      new RepoService(new RepoRepository(), mockTagFetcher),
     );
   });
 
@@ -87,7 +83,7 @@ describe('SubscriptionService (integration)', () => {
     });
 
     it('should return 404 if github repo has no releases', async () => {
-      vi.mocked(GithubApiClient.getTags).mockResolvedValue(
+      vi.mocked(mockTagFetcher.getTags).mockResolvedValue(
         E.left({ status: 404, message: 'Not found' }),
       );
 

@@ -1,10 +1,11 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
-import { subscriptionService } from '@modules/subscription';
+import { SubscriptionService } from '@modules/subscription';
 import { ConfirmDto, GetSubscriptionsDto, SubscribeDto, UnsubscribeDto } from '@shared/dtos';
 import { logger } from '@shared/logger';
 import { ApiResponse, GetSubscriptionsResponse } from '@shared/types';
 import path from 'path';
+import { container } from 'tsyringe';
 
 import { authInterceptor } from './interceptors/auth.interceptor';
 import { validateGrpc } from './interceptors/validate-grpc';
@@ -32,7 +33,7 @@ async function subscribe(
     return;
   }
 
-  const result = await subscriptionService.subscribe(dto.email, dto.repo);
+  const result = await container.resolve(SubscriptionService).subscribe(dto.email, dto.repo);
   callback(null, result);
 }
 
@@ -43,7 +44,7 @@ async function confirm(call: grpc.ServerUnaryCall<ConfirmDto, ApiResponse>, call
     return;
   }
 
-  const result = await subscriptionService.confirmSubscribe(dto.token);
+  const result = await container.resolve(SubscriptionService).confirmSubscribe(dto.token);
   callback(null, result);
 }
 
@@ -57,7 +58,7 @@ async function unsubscribe(
     return;
   }
 
-  const result = await subscriptionService.confirmUnsubscribe(dto.token);
+  const result = await container.resolve(SubscriptionService).confirmUnsubscribe(dto.token);
   callback(null, result);
 }
 
@@ -71,7 +72,7 @@ async function getSubscriptions(
     return;
   }
 
-  const result = await subscriptionService.getAllSubscriptionsByEmail(dto.email);
+  const result = await container.resolve(SubscriptionService).getAllSubscriptionsByEmail(dto.email);
   callback(null, result);
 }
 

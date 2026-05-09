@@ -1,12 +1,17 @@
 import { RepoRepository } from '@modules/subscription/repository/repo.repository';
-import { GithubApiClient } from '@shared/apis';
+import { TagFetcher, TAGS_FETCHER } from '@shared/apis/tags-fetcher.interface';
 import { logger } from '@shared/logger';
 import { totalReposCount } from '@shared/metrics';
 import { ApiResponse, E } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
+import { inject, injectable } from 'tsyringe';
 
+@injectable()
 export class RepoService {
-  constructor(private readonly repoRepository = new RepoRepository()) {}
+  constructor(
+    private readonly repoRepository: RepoRepository,
+    @inject(TAGS_FETCHER) private readonly repoTagFetcher: TagFetcher,
+  ) {}
 
   async findOrCreateRepo(repo: string): Promise<E.Either<ApiResponse, Repository>> {
     const foundRepo = await this.repoRepository.findByRepo(repo);
@@ -25,7 +30,7 @@ export class RepoService {
   }
 
   private async createNewRepo(repo: string): Promise<E.Either<ApiResponse, Repository>> {
-    const tagsResponseEither = await GithubApiClient.getTags(repo);
+    const tagsResponseEither = await this.repoTagFetcher.getTags(repo);
 
     if (E.isLeft(tagsResponseEither)) {
       logger.info(`Something went wrong. Message: ${JSON.stringify(tagsResponseEither.value.message)}`);

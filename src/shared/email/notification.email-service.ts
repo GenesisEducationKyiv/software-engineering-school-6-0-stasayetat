@@ -1,24 +1,28 @@
-import { EmailApiClient } from '@shared/apis';
 import {
   confirmationEmailTemplate,
   EMAIL_SUBJECT_CONFIRMATION,
   EMAIL_SUBJECT_RELEASE_NOTIFICATION,
   releaseNotificationTemplate,
 } from '@shared/email/email.utils';
+import { EMAIL_SENDER, EmailSender } from '@shared/email/email-sender.interface';
 import { logger } from '@shared/logger';
 import { emailSentTotal } from '@shared/metrics';
 import { E, FailureResult, SuccessResult } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { getErrorMessage } from '@shared/utils';
+import { inject, injectable } from 'tsyringe';
 
+@injectable()
 export class NotificationEmailService {
+  constructor(@inject(EMAIL_SENDER) private readonly emailSender: EmailSender) {}
+
   async sendConfirmationEmail(
     to: string,
     token: string,
     repo: string,
   ): Promise<E.Either<FailureResult, SuccessResult>> {
     try {
-      await EmailApiClient.sendEmail(to, EMAIL_SUBJECT_CONFIRMATION, confirmationEmailTemplate(token, repo));
+      await this.emailSender.send(to, EMAIL_SUBJECT_CONFIRMATION, confirmationEmailTemplate(token, repo));
 
       logger.info(`User ${to} has received confirmation email`);
 
@@ -38,7 +42,7 @@ export class NotificationEmailService {
 
   async sendReleaseNotification(to: string, repo: Repository, tag: string, unsubscribeToken: string) {
     try {
-      await EmailApiClient.sendEmail(
+      await this.emailSender.send(
         to,
         EMAIL_SUBJECT_RELEASE_NOTIFICATION(repo.repo, tag),
         releaseNotificationTemplate(repo, tag, unsubscribeToken),

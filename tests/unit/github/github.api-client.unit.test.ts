@@ -34,7 +34,7 @@ describe('GithubApiClient', () => {
     it('should return cached result from Redis', async () => {
       vi.mocked(redis.get).mockResolvedValue(JSON.stringify({ tag: 'right', value: { data: mockRelease } }));
 
-      const result = await GithubApiClient.getTags('owner/repo');
+      const result = await new GithubApiClient().getTags('owner/repo');
 
       expect(axios.get).not.toHaveBeenCalled();
       expect(result).toBeDefined();
@@ -43,7 +43,7 @@ describe('GithubApiClient', () => {
     it('should return right with data on success', async () => {
       vi.mocked(axios.get).mockResolvedValue({ status: 200, data: mockRelease });
 
-      const result = await GithubApiClient.getTags('owner/repo');
+      const result = await new GithubApiClient().getTags('owner/repo');
 
       expect(result.tag).toBe('right');
     });
@@ -51,7 +51,7 @@ describe('GithubApiClient', () => {
     it('should return left with 404 status when repo not found', async () => {
       vi.mocked(axios.get).mockResolvedValue({ status: 404, data: 'Not Found' });
 
-      const result = await GithubApiClient.getTags('owner/repo');
+      const result = await new GithubApiClient().getTags('owner/repo');
 
       expect(E.isLeft(result)).toBe(true);
 
@@ -67,7 +67,7 @@ describe('GithubApiClient', () => {
         headers: { 'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 60) },
       });
 
-      const result = await GithubApiClient.getTags('owner/repo');
+      const result = await new GithubApiClient().getTags('owner/repo');
 
       expect(E.isLeft(result)).toBe(true);
 
@@ -79,7 +79,7 @@ describe('GithubApiClient', () => {
     it('should return left on unexpected error', async () => {
       vi.mocked(axios.get).mockRejectedValue(new TypeError('Network Error'));
 
-      const result = await GithubApiClient.getTags('owner/repo');
+      const result = await new GithubApiClient().getTags('owner/repo');
 
       expect(E.isLeft(result)).toBe(true);
 
