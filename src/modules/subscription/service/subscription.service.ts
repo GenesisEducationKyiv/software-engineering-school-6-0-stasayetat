@@ -1,28 +1,27 @@
-import { GithubApiClient } from '@shared/apis';
+import { RepoService } from '@modules/subscription/service/repo.service';
 import { NotificationEmailService } from '@shared/email';
 import { logger } from '@shared/logger';
-import { activeSubscriptionCount, subscriptionsTotal, totalReposCount } from '@shared/metrics';
+import { activeSubscriptionCount, subscriptionsTotal } from '@shared/metrics';
 import { ApiResponse, E, GetSubscriptionsResponse, MinifiedSubscription, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 
-import { RepoRepository } from '../repository/repo.repository';
 import { SubscriptionRepository } from '../repository/subscription.repository';
 
 export class SubscriptionService {
   constructor(
     private readonly subscriptionRepository = new SubscriptionRepository(),
-    private readonly repoRepository = new RepoRepository(),
     private readonly notificationEmailService = new NotificationEmailService(),
+    private readonly repoService = new RepoService(),
   ) {}
 
   async subscribe(email: string, repo: string): Promise<ApiResponse> {
-    const foundRepo = await this.repoRepository.findByRepo(repo);
+    const foundRepo = await this.repoService.findOrCreateRepo(repo);
 
-    if (foundRepo) {
-      return await this.subscribeToExistingRepo(email, foundRepo);
+    if (E.isLeft(foundRepo)) {
+      return foundRepo.value;
     }
 
-    return await this.subscribeToNewRepo(email, repo);
+    return await this.subscribeToExistingRepo(email, foundRepo.value);
   }
 
   async confirmSubscribe(token: string): Promise<ApiResponse> {
@@ -55,7 +54,13 @@ export class SubscriptionService {
     await this.subscriptionRepository.removeSubscription(foundSubscriptionEither.value);
     activeSubscriptionCount.dec();
 
-    await this.removeRepoIfEmpty(foundSubscriptionEither);
+    const repoId = foundSubscriptionEither.value.repoId;
+
+    const subscriptionsCount = await this.subscriptionRepository.countByRepoId(repoId);
+
+    if (!subscriptionsCount) {
+      await this.repoService.removeRepo(repoId);
+    }
 
     logger.info(`Subscription removed successfully for ${token}`);
 
@@ -109,6 +114,8 @@ export class SubscriptionService {
       return responseEither.value;
     }
 
+    logger.info(`Confirmation for ${repository.repo} successfully sent to ${email}`);
+
     subscriptionsTotal.inc({ status: 'sent' });
 
     return { status: 200, message: 'Confirmation email sent' };
@@ -138,53 +145,6 @@ export class SubscriptionService {
     subscriptionsTotal.inc({ status: 'resent' });
 
     return { status: 200, message: 'Confirmation email resent' };
-  }
-
-  private async subscribeToNewRepo(email: string, repo: string) {
-    const tagsResponseEither = await GithubApiClient.getTags(repo);
-
-    if (E.isLeft(tagsResponseEither)) {
-      logger.info(`Something went wrong. Message: ${JSON.stringify(tagsResponseEither.value.message)}`);
-
-      subscriptionsTotal.inc({ status: 'repo_not_found' });
-
-      return tagsResponseEither.value;
-    }
-
-    const tags = tagsResponseEither.value;
-
-    if (!tags.length) {
-      subscriptionsTotal.inc({ status: 'tags_not_found' });
-
-      return { status: 404, message: 'Repository has no tags' };
-    }
-
-    const newRepo = await this.repoRepository.createRepo(repo, tags[0].name);
-
-    totalReposCount.inc();
-
-    const newSubscription = await this.subscriptionRepository.createNewSubscription(email, newRepo.id);
-    const responseEither = await this.sendConfirmationOrFail(email, newSubscription.token, repo);
-
-    if (E.isLeft(responseEither)) {
-      return responseEither.value;
-    }
-
-    logger.info(`Confirmation for ${repo} successfully sent to ${email}`);
-
-    subscriptionsTotal.inc({ status: 'created' });
-
-    return { status: 200, message: 'Confirmation email sent' };
-  }
-
-  private async removeRepoIfEmpty(foundSubscriptionEither: E.Right<Subscription>) {
-    const subscriptionsCount = await this.subscriptionRepository.countByRepoId(foundSubscriptionEither.value.repoId);
-
-    if (!subscriptionsCount) {
-      await this.repoRepository.deleteRepo(foundSubscriptionEither.value.repoId);
-
-      totalReposCount.dec();
-    }
   }
 
   private async sendConfirmationOrFail(

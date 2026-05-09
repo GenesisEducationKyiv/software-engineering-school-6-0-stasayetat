@@ -1,4 +1,5 @@
 import { ScannerService } from '@modules/scanner';
+import { RepoTagFetcher } from '@modules/scanner/service/repo-tag.fetcher';
 import { RepoRepository } from '@modules/subscription/repository/repo.repository';
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
 import { GithubApiClient } from '@shared/apis/github.api-client';
@@ -41,6 +42,7 @@ describe('ScannerService (integration)', () => {
 
     service = new ScannerService(
       new RepoRepository(),
+      new RepoTagFetcher(),
       new SubscriptionRepository(),
       mockNotifierService as any,
     );

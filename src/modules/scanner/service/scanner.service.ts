@@ -1,12 +1,10 @@
-import { GithubApiClient } from '@shared/apis';
+import { RepoTagFetcher } from '@modules/scanner/service/repo-tag.fetcher';
 import { NotificationEmailService } from '@shared/email';
 import { logger } from '@shared/logger';
 import { scannerRunDuration } from '@shared/metrics';
 import { E, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { getErrorMessage } from '@shared/utils';
-import Bottleneck from 'bottleneck';
-import ms from 'ms';
 
 import { RepoRepository } from '../../subscription/repository/repo.repository';
 import { SubscriptionRepository } from '../../subscription/repository/subscription.repository';
@@ -14,15 +12,9 @@ import { RepoNotifyInfo, RepoScanError, RepoScanSuccess } from '../scanner.types
 import { hasNewRelease } from '../scanner.utils';
 
 export class ScannerService {
-  private readonly scannerLimiter = new Bottleneck({
-    reservoir: 5000,
-    reservoirRefreshAmount: 5000,
-    reservoirRefreshInterval: ms('1 hour'),
-    maxConcurrent: 10,
-  });
-
   constructor(
     private readonly repoRepository = new RepoRepository(),
+    private readonly repoTagFetcher = new RepoTagFetcher(),
     private readonly subscriptionRepository = new SubscriptionRepository(),
     private readonly notifierService = new NotificationEmailService(),
   ) {}
@@ -109,7 +101,7 @@ export class ScannerService {
   private async scanAllRepos(allRepos: Repository[]) {
     const resultEithers = await Promise.all(
       allRepos.map(repo => {
-        return this.scannerLimiter.schedule(() => this.fetchTagsInfo(repo));
+        return this.repoTagFetcher.getTags(repo);
       }),
     );
 
@@ -134,28 +126,5 @@ export class ScannerService {
     }
 
     return successful;
-  }
-
-  private async fetchTagsInfo(repo: Repository): Promise<E.Either<RepoScanError, RepoScanSuccess>> {
-    const tagsResponseEither = await GithubApiClient.getTags(repo.repo);
-
-    if (E.isLeft(tagsResponseEither)) {
-      return E.left({
-        currentRepo: repo,
-        error: tagsResponseEither.value,
-      });
-    }
-
-    if (!tagsResponseEither.value.length) {
-      return E.left({
-        currentRepo: repo,
-        error: { status: 404, message: 'Repository has no tags' },
-      });
-    }
-
-    return E.right({
-      currentRepo: repo,
-      latestTag: tagsResponseEither.value[0].name,
-    });
   }
 }

@@ -1,5 +1,5 @@
-import { RepoRepository } from '@modules/subscription/repository/repo.repository';
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
+import { RepoService } from '@modules/subscription/service/repo.service';
 import { SubscriptionService } from '@modules/subscription/service/subscription.service';
 import { GithubApiClient } from '@shared/apis/github.api-client';
 import { db, repos, subscriptions } from '@shared/db';
@@ -32,8 +32,8 @@ describe('SubscriptionService (integration)', () => {
 
     service = new SubscriptionService(
       new SubscriptionRepository(),
-      new RepoRepository(),
       mockEmailService as any,
+      new RepoService(),
     );
   });
 

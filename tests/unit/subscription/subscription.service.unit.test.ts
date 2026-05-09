@@ -1,16 +1,9 @@
 import { SubscriptionService } from '@modules/subscription';
-import { RepoRepository } from '@modules/subscription/repository/repo.repository';
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
-import { GithubApiClient } from '@shared/apis/github.api-client';
+import { RepoService } from '@modules/subscription/service/repo.service';
 import { NotificationEmailService } from '@shared/email/notification.email-service';
 import { E } from '@shared/types';
 import { beforeEach, describe, expect, it, MockedObject, vi } from 'vitest';
-
-vi.mock('@shared/apis/github.api-client', () => ({
-  GithubApiClient: {
-    getTags: vi.fn(),
-  },
-}));
 
 const mockRepo = {
   id: 'repo-uuid',
@@ -28,19 +21,17 @@ const mockSubscription = {
   createdAt: new Date(),
 };
 
-const mockTagsResponse = [{ name: 'v1.0.0' }];
-
 describe('SubscriptionService', () => {
   let service: SubscriptionService;
   let subscriptionRepository: MockedObject<SubscriptionRepository>;
-  let repoRepository: MockedObject<RepoRepository>;
+  let repoService: MockedObject<RepoService>;
   let notificationEmailService: MockedObject<NotificationEmailService>;
 
   beforeEach(() => {
     vi.resetAllMocks();
 
     subscriptionRepository = new SubscriptionRepository() as MockedObject<SubscriptionRepository>;
-    repoRepository = new RepoRepository() as MockedObject<RepoRepository>;
+    repoService = new RepoService() as MockedObject<RepoService>;
     notificationEmailService = new NotificationEmailService() as MockedObject<NotificationEmailService>;
 
     vi.spyOn(subscriptionRepository, 'getSubscriptionByEmailAndRepoId').mockResolvedValue(null);
@@ -51,21 +42,18 @@ describe('SubscriptionService', () => {
     vi.spyOn(subscriptionRepository, 'getSubscriptionByToken').mockResolvedValue(null);
     vi.spyOn(subscriptionRepository, 'countByRepoId').mockResolvedValue(0);
 
-    vi.spyOn(repoRepository, 'findByRepo').mockResolvedValue(null);
-    vi.spyOn(repoRepository, 'createRepo').mockResolvedValue(mockRepo);
-    vi.spyOn(repoRepository, 'deleteRepo').mockResolvedValue(undefined);
+    vi.spyOn(repoService, 'findOrCreateRepo').mockResolvedValue(E.right(mockRepo));
+    vi.spyOn(repoService, 'removeRepo').mockResolvedValue(undefined);
 
     vi.spyOn(notificationEmailService, 'sendConfirmationEmail').mockResolvedValue(E.right({ success: true }));
     vi.spyOn(notificationEmailService, 'sendReleaseNotification').mockResolvedValue(undefined);
 
-    vi.mocked(GithubApiClient.getTags).mockResolvedValue(E.right(mockTagsResponse as any));
-
-    service = new SubscriptionService(subscriptionRepository, repoRepository, notificationEmailService);
+    service = new SubscriptionService(subscriptionRepository, notificationEmailService, repoService);
   });
 
   describe('subscribe', () => {
     it('should return 409 if subscription already exists and is confirmed', async () => {
-      repoRepository.findByRepo.mockResolvedValue(mockRepo);
+      repoService.findOrCreateRepo.mockResolvedValue(E.right(mockRepo));
       subscriptionRepository.getSubscriptionByEmailAndRepoId.mockResolvedValue({ ...mockSubscription, confirmed: true });
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
@@ -75,7 +63,7 @@ describe('SubscriptionService', () => {
     });
 
     it('should resend confirmation email if subscription exists but not confirmed', async () => {
-      repoRepository.findByRepo.mockResolvedValue(mockRepo);
+      repoService.findOrCreateRepo.mockResolvedValue(E.right(mockRepo));
       subscriptionRepository.getSubscriptionByEmailAndRepoId.mockResolvedValue({ ...mockSubscription, confirmed: false });
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
@@ -86,7 +74,7 @@ describe('SubscriptionService', () => {
     });
 
     it('should return 500 if confirmation email fails on resend', async () => {
-      repoRepository.findByRepo.mockResolvedValue(mockRepo);
+      repoService.findOrCreateRepo.mockResolvedValue(E.right(mockRepo));
       subscriptionRepository.getSubscriptionByEmailAndRepoId.mockResolvedValue({ ...mockSubscription, confirmed: false });
       notificationEmailService.sendConfirmationEmail.mockResolvedValue(E.left({ success: false, message: 'SMTP error' }));
 
@@ -95,8 +83,8 @@ describe('SubscriptionService', () => {
       expect(result.status).toBe(500);
     });
 
-    it('should return 404 if github repo has no tags', async () => {
-      vi.mocked(GithubApiClient.getTags).mockResolvedValue(E.left({ status: 404, message: 'Not found' }));
+    it('should return 404 if repo service returns an error', async () => {
+      repoService.findOrCreateRepo.mockResolvedValue(E.left({ status: 404, message: 'Not found' }));
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
@@ -105,7 +93,7 @@ describe('SubscriptionService', () => {
     });
 
     it('should return 404 if repo has no tags', async () => {
-      vi.mocked(GithubApiClient.getTags).mockResolvedValue(E.right([]));
+      repoService.findOrCreateRepo.mockResolvedValue(E.left({ status: 404, message: 'Repository has no tags' }));
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
@@ -113,12 +101,11 @@ describe('SubscriptionService', () => {
       expect(result.message).toBe('Repository has no tags');
     });
 
-    it('should create new repo and subscription and send confirmation email', async () => {
+    it('should create new subscription and send confirmation email', async () => {
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
       expect(result.status).toBe(200);
       expect(result.message).toBe('Confirmation email sent');
-      expect(repoRepository.createRepo).toHaveBeenCalledWith('owner/repo', mockTagsResponse[0].name);
       expect(subscriptionRepository.createNewSubscription).toHaveBeenCalledWith('test@gmail.com', mockRepo.id);
       expect(notificationEmailService.sendConfirmationEmail).toHaveBeenCalledWith('test@gmail.com', mockSubscription.token, 'owner/repo');
     });
@@ -132,17 +119,16 @@ describe('SubscriptionService', () => {
     });
 
     it('should create subscription for existing repo', async () => {
-      repoRepository.findByRepo.mockResolvedValue(mockRepo);
+      repoService.findOrCreateRepo.mockResolvedValue(E.right(mockRepo));
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
       expect(result.status).toBe(200);
-      expect(repoRepository.createRepo).not.toHaveBeenCalled();
       expect(subscriptionRepository.createNewSubscription).toHaveBeenCalledWith('test@gmail.com', mockRepo.id);
     });
 
     it('should return 500 if confirmation email fails for existing repo new subscription', async () => {
-      repoRepository.findByRepo.mockResolvedValue(mockRepo);
+      repoService.findOrCreateRepo.mockResolvedValue(E.right(mockRepo));
       notificationEmailService.sendConfirmationEmail.mockResolvedValue(E.left({ success: false, message: 'SMTP error' }));
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
@@ -192,7 +178,7 @@ describe('SubscriptionService', () => {
 
       await service.confirmUnsubscribe('token-uuid');
 
-      expect(repoRepository.deleteRepo).toHaveBeenCalledWith(mockSubscription.repoId);
+      expect(repoService.removeRepo).toHaveBeenCalledWith(mockSubscription.repoId);
     });
 
     it('should not delete repo if other subscriptions exist', async () => {
@@ -201,7 +187,7 @@ describe('SubscriptionService', () => {
 
       await service.confirmUnsubscribe('token-uuid');
 
-      expect(repoRepository.deleteRepo).not.toHaveBeenCalled();
+      expect(repoService.removeRepo).not.toHaveBeenCalled();
     });
   });
 
