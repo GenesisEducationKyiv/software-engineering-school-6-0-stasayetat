@@ -127,7 +127,7 @@ Responsibilities
 - __Production__: Resend HTTP API
 - __Development__: Mailpit using nodemailer
 
-## Testing
+## 5. Testing
 
 System is covered by unit and integration test
 
@@ -138,12 +138,12 @@ with its tag
 ### Integration tests
 Run a real PostgreSQL and Redis using testcontainers and test full subscription flow, from subscribing to receiving notifications.
 
-## Reliability after 3 months
+## 6. Reliability after 3 months
 
 - CI runs on every push (linting, type-check, tests)
 - Prometheus metrics
 
-## Database Schema
+## 7. Database Schema
 
 repos
 
@@ -164,3 +164,11 @@ subscriptions
 | token       | uuid      | NOT NULL, auto-generated             |
 | confirmed   | boolean   | NOT NULL, default false              |
 | created_at  | timestamp | NOT NULL, default now                |
+
+## 8. Use-Case Diagram
+
+![a.png](images/use-case.png)
+
+## 9. Sequence Diagram
+
+![a.png](images/sequence-diagram.png)
