@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import './container';
 import './modules/scanner/scanner.cron-controller';
+import './modules/subscription/subscription.cron-controller';
 
 import { db, repos, subscriptions } from '@shared/db';
 import { env } from '@shared/env';

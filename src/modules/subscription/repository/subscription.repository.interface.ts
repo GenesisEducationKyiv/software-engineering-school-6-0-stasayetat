@@ -12,4 +12,5 @@ export interface ISubscriptionRepository {
   getSubscriptionByToken(token: string, isConfirmed: boolean): Promise<Subscription | null>;
   getSubscriptionsByRepoIds(repoIds: string[]): Promise<Subscription[]>;
   countByRepoId(repoId: string): Promise<number>;
+  deleteExpiredUnconfirmed(): Promise<void>;
 }
