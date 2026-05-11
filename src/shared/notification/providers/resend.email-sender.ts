@@ -1,5 +1,5 @@
-import { EmailSender } from '@shared/email/email-sender.interface';
 import { env } from '@shared/env';
+import { EmailSender } from '@shared/notification/email-sender.interface';
 import Bottleneck from 'bottleneck';
 import { Resend } from 'resend';
 import { injectable } from 'tsyringe';

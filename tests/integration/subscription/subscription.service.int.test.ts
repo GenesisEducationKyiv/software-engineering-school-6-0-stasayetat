@@ -65,7 +65,7 @@ describe('SubscriptionService (integration)', () => {
       const result = await service.subscribe('test@gmail.com', 'facebook/react');
 
       expect(result.status).toBe(200);
-      expect(result.message).toBe('Confirmation email resent');
+      expect(result.message).toBe('Confirmation notification resent');
 
       const subscriptionsInDb = await db.select().from(subscriptions);
       expect(subscriptionsInDb).toHaveLength(1);

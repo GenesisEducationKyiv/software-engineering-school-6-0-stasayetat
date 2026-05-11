@@ -3,9 +3,10 @@ import {
   SUBSCRIPTION_REPOSITORY,
 } from '@modules/subscription/repository/subscription.repository.interface';
 import { RepoService } from '@modules/subscription/service/repo.service';
-import { NotificationEmailService } from '@shared/email';
 import { logger } from '@shared/logger';
 import { activeSubscriptionCount, subscriptionsTotal } from '@shared/metrics';
+import { NotificationEmailService } from '@shared/notification';
+import { NOTIFICATION_SERVICE } from '@shared/notification/notification-service.interface';
 import { ApiResponse, E, GetSubscriptionsResponse, MinifiedSubscription, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { inject, injectable } from 'tsyringe';
@@ -14,7 +15,7 @@ import { inject, injectable } from 'tsyringe';
 export class SubscriptionService {
   constructor(
     @inject(SUBSCRIPTION_REPOSITORY) private readonly subscriptionRepository: ISubscriptionRepository,
-    private readonly notificationEmailService: NotificationEmailService,
+    @inject(NOTIFICATION_SERVICE) private readonly notificationEmailService: NotificationEmailService,
     private readonly repoService: RepoService,
   ) {}
 
@@ -122,7 +123,7 @@ export class SubscriptionService {
 
     subscriptionsTotal.inc({ status: 'sent' });
 
-    return { status: 200, message: 'Confirmation email sent' };
+    return { status: 200, message: 'Confirmation notification sent' };
   }
 
   private async handleExistingSubscription(
@@ -148,7 +149,7 @@ export class SubscriptionService {
 
     subscriptionsTotal.inc({ status: 'resent' });
 
-    return { status: 200, message: 'Confirmation email resent' };
+    return { status: 200, message: 'Confirmation notification resent' };
   }
 
   private async sendConfirmationOrFail(

@@ -11,9 +11,9 @@ app.use('/api', subscriptionRouter);
 const authed = (req: request.Test) => req.set('x-api-key', env.APP_API_KEY);
 
 describe('POST /api/subscribe', () => {
-  it('should return 400 for invalid email', async () => {
+  it('should return 400 for invalid notification', async () => {
     const res = await authed(request(app).post('/api/subscribe'))
-      .send({ email: 'not-an-email', repo: 'owner/repo' });
+      .send({ email: 'not-an-notification', repo: 'owner/repo' });
     expect(res.status).toBe(400);
   });
 
@@ -49,12 +49,12 @@ describe('GET /api/unsubscribe/:token', () => {
 });
 
 describe('GET /api/subscriptions', () => {
-  it('should return 400 for invalid email', async () => {
-    const res = await authed(request(app).get('/api/subscriptions?email=not-an-email'));
+  it('should return 400 for invalid notification', async () => {
+    const res = await authed(request(app).get('/api/subscriptions?email=not-an-notification'));
     expect(res.status).toBe(400);
   });
 
-  it('should return 400 for missing email', async () => {
+  it('should return 400 for missing notification', async () => {
     const res = await authed(request(app).get('/api/subscriptions'));
     expect(res.status).toBe(400);
   });

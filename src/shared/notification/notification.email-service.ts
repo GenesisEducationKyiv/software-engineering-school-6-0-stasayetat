@@ -1,19 +1,20 @@
+import { logger } from '@shared/logger';
+import { emailSentTotal } from '@shared/metrics';
 import {
   confirmationEmailTemplate,
   EMAIL_SUBJECT_CONFIRMATION,
   EMAIL_SUBJECT_RELEASE_NOTIFICATION,
   releaseNotificationTemplate,
-} from '@shared/email/email.utils';
-import { EMAIL_SENDER, EmailSender } from '@shared/email/email-sender.interface';
-import { logger } from '@shared/logger';
-import { emailSentTotal } from '@shared/metrics';
+} from '@shared/notification/email.utils';
+import { EMAIL_SENDER, EmailSender } from '@shared/notification/email-sender.interface';
+import { NotificationService } from '@shared/notification/notification-service.interface';
 import { E, FailureResult, SuccessResult } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { getErrorMessage } from '@shared/utils';
 import { inject, injectable } from 'tsyringe';
 
 @injectable()
-export class NotificationEmailService {
+export class NotificationEmailService implements NotificationService {
   constructor(@inject(EMAIL_SENDER) private readonly emailSender: EmailSender) {}
 
   async sendConfirmationEmail(

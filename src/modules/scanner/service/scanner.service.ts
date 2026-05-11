@@ -4,9 +4,9 @@ import {
   ISubscriptionRepository,
   SUBSCRIPTION_REPOSITORY,
 } from '@modules/subscription/repository/subscription.repository.interface';
-import { NotificationEmailService } from '@shared/email';
 import { logger } from '@shared/logger';
 import { scannerRunDuration } from '@shared/metrics';
+import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
 import { E, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { getErrorMessage } from '@shared/utils';
@@ -21,7 +21,7 @@ export class ScannerService {
     @inject(REPO_REPOSITORY) private readonly repoRepository: IRepoRepository,
     private readonly repoTagFetcher: RepoTagFetcher,
     @inject(SUBSCRIPTION_REPOSITORY) private readonly subscriptionRepository: ISubscriptionRepository,
-    private readonly notifierService: NotificationEmailService,
+    @inject(NOTIFICATION_SERVICE) private readonly notifierService: NotificationService,
   ) {}
 
   async run(): Promise<void> {

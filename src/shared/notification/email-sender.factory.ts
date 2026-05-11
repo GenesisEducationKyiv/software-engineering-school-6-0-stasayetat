@@ -1,7 +1,7 @@
-import { EmailSender } from '@shared/email/email-sender.interface';
-import { ResendEmailSender } from '@shared/email/providers/resend.email-sender';
-import { SmtpEmailSender } from '@shared/email/providers/smtp.email-sender';
 import { env } from '@shared/env';
+import { EmailSender } from '@shared/notification/email-sender.interface';
+import { ResendEmailSender } from '@shared/notification/providers/resend.email-sender';
+import { SmtpEmailSender } from '@shared/notification/providers/smtp.email-sender';
 
 type EmailProvider = 'resend' | 'smtp';
 

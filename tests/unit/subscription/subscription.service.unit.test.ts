@@ -1,7 +1,7 @@
 import { SubscriptionService } from '@modules/subscription';
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
 import { RepoService } from '@modules/subscription/service/repo.service';
-import { NotificationEmailService } from '@shared/email/notification.email-service';
+import { NotificationEmailService } from '@shared/notification/notification.email-service';
 import { E } from '@shared/types';
 import { beforeEach, describe, expect, it, MockedObject, vi } from 'vitest';
 
@@ -62,18 +62,18 @@ describe('SubscriptionService', () => {
       expect(notificationEmailService.sendConfirmationEmail).not.toHaveBeenCalled();
     });
 
-    it('should resend confirmation email if subscription exists but not confirmed', async () => {
+    it('should resend confirmation notification if subscription exists but not confirmed', async () => {
       repoService.findOrCreateRepo.mockResolvedValue(E.right(mockRepo));
       subscriptionRepository.getSubscriptionByEmailAndRepoId.mockResolvedValue({ ...mockSubscription, confirmed: false });
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
       expect(result.status).toBe(200);
-      expect(result.message).toBe('Confirmation email resent');
+      expect(result.message).toBe('Confirmation notification resent');
       expect(notificationEmailService.sendConfirmationEmail).toHaveBeenCalledWith('test@gmail.com', mockSubscription.token, 'owner/repo');
     });
 
-    it('should return 500 if confirmation email fails on resend', async () => {
+    it('should return 500 if confirmation notification fails on resend', async () => {
       repoService.findOrCreateRepo.mockResolvedValue(E.right(mockRepo));
       subscriptionRepository.getSubscriptionByEmailAndRepoId.mockResolvedValue({ ...mockSubscription, confirmed: false });
       notificationEmailService.sendConfirmationEmail.mockResolvedValue(E.left({ success: false, message: 'SMTP error' }));
@@ -101,16 +101,16 @@ describe('SubscriptionService', () => {
       expect(result.message).toBe('Repository has no tags');
     });
 
-    it('should create new subscription and send confirmation email', async () => {
+    it('should create new subscription and send confirmation notification', async () => {
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
       expect(result.status).toBe(200);
-      expect(result.message).toBe('Confirmation email sent');
+      expect(result.message).toBe('Confirmation notification sent');
       expect(subscriptionRepository.createNewSubscription).toHaveBeenCalledWith('test@gmail.com', mockRepo.id);
       expect(notificationEmailService.sendConfirmationEmail).toHaveBeenCalledWith('test@gmail.com', mockSubscription.token, 'owner/repo');
     });
 
-    it('should return 500 if confirmation email fails on new subscription', async () => {
+    it('should return 500 if confirmation notification fails on new subscription', async () => {
       notificationEmailService.sendConfirmationEmail.mockResolvedValue(E.left({ success: false, message: 'SMTP error' }));
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
@@ -127,7 +127,7 @@ describe('SubscriptionService', () => {
       expect(subscriptionRepository.createNewSubscription).toHaveBeenCalledWith('test@gmail.com', mockRepo.id);
     });
 
-    it('should return 500 if confirmation email fails for existing repo new subscription', async () => {
+    it('should return 500 if confirmation notification fails for existing repo new subscription', async () => {
       repoService.findOrCreateRepo.mockResolvedValue(E.right(mockRepo));
       notificationEmailService.sendConfirmationEmail.mockResolvedValue(E.left({ success: false, message: 'SMTP error' }));
 
@@ -215,7 +215,7 @@ describe('SubscriptionService', () => {
       }]);
     });
 
-    it('should return all subscriptions for email', async () => {
+    it('should return all subscriptions for notification', async () => {
       subscriptionRepository.getAllActiveSubscriptionByEmail.mockResolvedValue([
         { subscriptions: mockSubscription, repos: mockRepo },
         { subscriptions: { ...mockSubscription, id: 'sub-uuid-2' }, repos: { ...mockRepo, repo: 'owner/repo2' } },

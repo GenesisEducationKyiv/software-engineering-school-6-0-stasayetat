@@ -2,7 +2,7 @@ import { RepoTagFetcher } from '@modules/scanner/service/repo-tag.fetcher';
 import { ScannerService } from '@modules/scanner/service/scanner.service';
 import { RepoRepository } from '@modules/subscription/repository/repo.repository';
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
-import { NotificationEmailService } from '@shared/email/notification.email-service';
+import { NotificationEmailService } from '@shared/notification/notification.email-service';
 import { E } from '@shared/types';
 import { beforeEach, describe, expect, it, MockedObject, vi } from 'vitest';
 
