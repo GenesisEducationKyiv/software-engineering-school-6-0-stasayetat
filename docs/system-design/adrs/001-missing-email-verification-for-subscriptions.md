@@ -12,7 +12,7 @@ This can be done through full authentication flow or using a separate email conf
 
 ---
 
-## Decision
+## Decisions
 
 ### 1. Full authentication (OAuth / password-based accounts)
 - Pros: Strong identity guarantee, enables user dashboard, session management
