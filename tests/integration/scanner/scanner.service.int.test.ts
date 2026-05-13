@@ -4,7 +4,7 @@ import { RepoRepository } from '@modules/subscription/repository/repo.repository
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
-import { E, TagsResponse } from '@shared/types';
+import { ApiResponseExceptionCode, E, TagsResponse } from '@shared/types';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -112,7 +112,7 @@ describe('ScannerService (integration)', () => {
       await seedConfirmedSubscription('test@gmail.com', repo2.id);
 
       vi.mocked(mockTagFetcher.getTags)
-        .mockResolvedValueOnce(E.left({ status: 500, message: 'Error' }))
+        .mockResolvedValueOnce(E.left({ code: ApiResponseExceptionCode.GENERAL_FAILURE, message: 'Error' }))
         .mockResolvedValueOnce(E.right([{ name: 'v5.0.0' }] as TagsResponse));
 
       await service.run();

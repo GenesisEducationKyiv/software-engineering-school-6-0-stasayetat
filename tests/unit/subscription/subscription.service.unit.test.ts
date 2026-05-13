@@ -1,8 +1,8 @@
-import { SubscriptionService } from '@modules/subscription';
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
 import { RepoService } from '@modules/subscription/service/repo.service';
+import { SubscriptionService } from '@modules/subscription/service/subscription.service';
 import { NotificationEmailService } from '@shared/notification/notification.email-service';
-import { E } from '@shared/types';
+import { ApiResponseExceptionCode, E } from '@shared/types';
 import { beforeEach, describe, expect, it, MockedObject, vi } from 'vitest';
 
 const mockRepo = {
@@ -58,8 +58,12 @@ describe('SubscriptionService', () => {
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
-      expect(result.status).toBe(409);
-      expect(notificationEmailService.sendConfirmationEmail).not.toHaveBeenCalled();
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(ApiResponseExceptionCode.ALREADY_EXISTS);
+        expect(notificationEmailService.sendConfirmationEmail).not.toHaveBeenCalled();
+      }
     });
 
     it('should resend confirmation notification if subscription exists but not confirmed', async () => {
@@ -68,8 +72,7 @@ describe('SubscriptionService', () => {
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
-      expect(result.status).toBe(200);
-      expect(result.message).toBe('Confirmation notification resent');
+      expect(E.isRight(result)).toBe(true);
       expect(notificationEmailService.sendConfirmationEmail).toHaveBeenCalledWith('test@gmail.com', mockSubscription.token, 'owner/repo');
     });
 
@@ -80,34 +83,49 @@ describe('SubscriptionService', () => {
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
-      expect(result.status).toBe(500);
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(ApiResponseExceptionCode.GENERAL_FAILURE);
+      }
     });
 
     it('should return 404 if repo service returns an error', async () => {
-      repoService.findOrCreateRepo.mockResolvedValue(E.left({ status: 404, message: 'Not found' }));
+      repoService.findOrCreateRepo.mockResolvedValue(E.left({ code: ApiResponseExceptionCode.NOT_FOUND, message: 'Not found' }));
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
-      expect(result.status).toBe(404);
-      expect(subscriptionRepository.createNewSubscription).not.toHaveBeenCalled();
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+        expect(subscriptionRepository.createNewSubscription).not.toHaveBeenCalled();
+      }
     });
 
     it('should return 404 if repo has no tags', async () => {
-      repoService.findOrCreateRepo.mockResolvedValue(E.left({ status: 404, message: 'Repository has no tags' }));
+      repoService.findOrCreateRepo.mockResolvedValue(E.left({ code: ApiResponseExceptionCode.NOT_FOUND, message: 'Repository has no tags' }));
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
-      expect(result.status).toBe(404);
-      expect(result.message).toBe('Repository has no tags');
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+        expect(result.value.message).toBe('Repository has no tags');
+      }
     });
 
     it('should create new subscription and send confirmation notification', async () => {
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
-      expect(result.status).toBe(200);
-      expect(result.message).toBe('Confirmation notification sent');
-      expect(subscriptionRepository.createNewSubscription).toHaveBeenCalledWith('test@gmail.com', mockRepo.id);
-      expect(notificationEmailService.sendConfirmationEmail).toHaveBeenCalledWith('test@gmail.com', mockSubscription.token, 'owner/repo');
+      expect(E.isRight(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(subscriptionRepository.createNewSubscription).toHaveBeenCalledWith('test@gmail.com', mockRepo.id);
+        expect(notificationEmailService.sendConfirmationEmail).toHaveBeenCalledWith('test@gmail.com', mockSubscription.token, 'owner/repo');
+      }
+
     });
 
     it('should return 500 if confirmation notification fails on new subscription', async () => {
@@ -115,7 +133,11 @@ describe('SubscriptionService', () => {
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
-      expect(result.status).toBe(500);
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(ApiResponseExceptionCode.GENERAL_FAILURE);
+      }
     });
 
     it('should create subscription for existing repo', async () => {
@@ -123,7 +145,7 @@ describe('SubscriptionService', () => {
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
-      expect(result.status).toBe(200);
+      expect(E.isRight(result)).toBe(true);
       expect(subscriptionRepository.createNewSubscription).toHaveBeenCalledWith('test@gmail.com', mockRepo.id);
     });
 
@@ -133,7 +155,12 @@ describe('SubscriptionService', () => {
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
-      expect(result.status).toBe(500);
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(ApiResponseExceptionCode.GENERAL_FAILURE);
+        expect(result.value.message).toBe('SMTP error');
+      }
     });
   });
 
@@ -141,8 +168,12 @@ describe('SubscriptionService', () => {
     it('should return 404 if token not found', async () => {
       const result = await service.confirmSubscribe('invalid-token');
 
-      expect(result.status).toBe(404);
-      expect(subscriptionRepository.confirmSubscription).not.toHaveBeenCalled();
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+        expect(subscriptionRepository.confirmSubscription).not.toHaveBeenCalled();
+      }
     });
 
     it('should confirm subscription for valid token', async () => {
@@ -150,7 +181,7 @@ describe('SubscriptionService', () => {
 
       const result = await service.confirmSubscribe('token-uuid');
 
-      expect(result.status).toBe(200);
+      expect(E.isRight(result)).toBe(true);
       expect(subscriptionRepository.confirmSubscription).toHaveBeenCalledWith(mockSubscription);
     });
   });
@@ -159,8 +190,13 @@ describe('SubscriptionService', () => {
     it('should return 404 if token not found', async () => {
       const result = await service.confirmUnsubscribe('invalid-token');
 
-      expect(result.status).toBe(404);
-      expect(subscriptionRepository.removeSubscription).not.toHaveBeenCalled();
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+        expect(subscriptionRepository.removeSubscription).not.toHaveBeenCalled();
+      }
+
     });
 
     it('should remove subscription for valid token', async () => {
@@ -168,7 +204,7 @@ describe('SubscriptionService', () => {
 
       const result = await service.confirmUnsubscribe('token-uuid');
 
-      expect(result.status).toBe(200);
+      expect(E.isRight(result)).toBe(true);
       expect(subscriptionRepository.removeSubscription).toHaveBeenCalledWith(mockSubscription);
     });
 
@@ -195,8 +231,11 @@ describe('SubscriptionService', () => {
     it('should return empty array if no subscriptions found', async () => {
       const result = await service.getAllSubscriptionsByEmail('test@gmail.com');
 
-      expect(result.status).toBe(200);
-      expect(result.data).toEqual([]);
+      expect(E.isRight(result)).toBe(true);
+
+      if (E.isRight(result)) {
+        expect(result.value).toEqual([]);
+      }
     });
 
     it('should return mapped subscriptions with repo data', async () => {
@@ -206,13 +245,17 @@ describe('SubscriptionService', () => {
 
       const result = await service.getAllSubscriptionsByEmail('test@gmail.com');
 
-      expect(result.status).toBe(200);
-      expect(result.data).toEqual([{
-        email: 'test@gmail.com',
-        repo: 'owner/repo',
-        confirmed: true,
-        last_seen_tag: 'v1.0.0',
-      }]);
+
+      expect(E.isRight(result)).toBe(true);
+
+      if (E.isRight(result)) {
+        expect(result.value).toEqual([{
+          email: 'test@gmail.com',
+          repo: 'owner/repo',
+          confirmed: true,
+          last_seen_tag: 'v1.0.0',
+        }]);
+      }
     });
 
     it('should return all subscriptions for notification', async () => {
@@ -223,8 +266,12 @@ describe('SubscriptionService', () => {
 
       const result = await service.getAllSubscriptionsByEmail('test@gmail.com');
 
-      expect(result.status).toBe(200);
-      expect(result.data).toHaveLength(2);
+
+      expect(E.isRight(result)).toBe(true);
+
+      if (E.isRight(result)) {
+        expect(result.value).toHaveLength(2);
+      }
     });
   });
 });

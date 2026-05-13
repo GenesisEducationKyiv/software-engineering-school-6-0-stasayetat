@@ -3,10 +3,11 @@ import * as protoLoader from '@grpc/proto-loader';
 import { SubscriptionService } from '@modules/subscription';
 import { ConfirmDto, GetSubscriptionsDto, SubscribeDto, UnsubscribeDto } from '@shared/dtos';
 import { logger } from '@shared/logger';
-import { ApiResponse, GetSubscriptionsResponse } from '@shared/types';
+import { ApiResponseException, E, MinifiedSubscription } from '@shared/types';
 import path from 'path';
 import { container } from 'tsyringe';
 
+import { toGrpcError } from './grpc.utils';
 import { authInterceptor } from './interceptors/auth.interceptor';
 import { validateGrpc } from './interceptors/validate-grpc';
 import { ProtoGrpcType } from './proto-types/subscription';
@@ -26,8 +27,8 @@ const proto = grpc.loadPackageDefinition(packageDefinition) as unknown as ProtoG
 const subscriptionService = container.resolve(SubscriptionService);
 
 async function subscribe(
-  call: grpc.ServerUnaryCall<SubscribeDto, ApiResponse>,
-  callback: grpc.sendUnaryData<ApiResponse>,
+  call: grpc.ServerUnaryCall<SubscribeDto, ApiResponseException>,
+  callback: grpc.sendUnaryData<string>,
 ) {
   const dto = await validateGrpc(SubscribeDto, call.request, callback);
 
@@ -36,10 +37,18 @@ async function subscribe(
   }
 
   const result = await subscriptionService.subscribe(dto.email, dto.repo);
-  callback(null, result);
+
+  if (E.isLeft(result)) {
+    return callback(toGrpcError(result.value));
+  }
+
+  callback(null, 'Email notification sent');
 }
 
-async function confirm(call: grpc.ServerUnaryCall<ConfirmDto, ApiResponse>, callback: grpc.sendUnaryData<ApiResponse>) {
+async function confirm(
+  call: grpc.ServerUnaryCall<ConfirmDto, ApiResponseException>,
+  callback: grpc.sendUnaryData<string>,
+) {
   const dto = await validateGrpc(ConfirmDto, call.request, callback);
 
   if (!dto) {
@@ -47,12 +56,17 @@ async function confirm(call: grpc.ServerUnaryCall<ConfirmDto, ApiResponse>, call
   }
 
   const result = await subscriptionService.confirmSubscribe(dto.token);
-  callback(null, result);
+
+  if (E.isLeft(result)) {
+    return callback(toGrpcError(result.value));
+  }
+
+  callback(null, 'Subscription confirmed successfully');
 }
 
 async function unsubscribe(
-  call: grpc.ServerUnaryCall<UnsubscribeDto, ApiResponse>,
-  callback: grpc.sendUnaryData<ApiResponse>,
+  call: grpc.ServerUnaryCall<UnsubscribeDto, ApiResponseException>,
+  callback: grpc.sendUnaryData<string>,
 ) {
   const dto = await validateGrpc(UnsubscribeDto, call.request, callback);
 
@@ -61,12 +75,17 @@ async function unsubscribe(
   }
 
   const result = await subscriptionService.confirmUnsubscribe(dto.token);
-  callback(null, result);
+
+  if (E.isLeft(result)) {
+    return callback(toGrpcError(result.value));
+  }
+
+  callback(null, 'Subscription removed successfully');
 }
 
 async function getSubscriptions(
-  call: grpc.ServerUnaryCall<GetSubscriptionsDto, GetSubscriptionsResponse>,
-  callback: grpc.sendUnaryData<GetSubscriptionsResponse>,
+  call: grpc.ServerUnaryCall<GetSubscriptionsDto, MinifiedSubscription[]>,
+  callback: grpc.sendUnaryData<MinifiedSubscription[]>,
 ) {
   const dto = await validateGrpc(GetSubscriptionsDto, call.request, callback);
 
@@ -75,7 +94,12 @@ async function getSubscriptions(
   }
 
   const result = await subscriptionService.getAllSubscriptionsByEmail(dto.email);
-  callback(null, result);
+
+  if (E.isLeft(result)) {
+    return callback(toGrpcError(result.value));
+  }
+
+  callback(null, result.value);
 }
 
 export function startGrpcServer(port: number) {
@@ -84,18 +108,20 @@ export function startGrpcServer(port: number) {
   });
 
   server.addService(proto.subscription.SubscriptionService.service, {
-    subscribe: (call: grpc.ServerUnaryCall<SubscribeDto, ApiResponse>, callback: grpc.sendUnaryData<ApiResponse>) =>
+    subscribe: (call: grpc.ServerUnaryCall<SubscribeDto, ApiResponseException>, callback: grpc.sendUnaryData<string>) =>
       void subscribe(call, callback),
 
-    confirm: (call: grpc.ServerUnaryCall<ConfirmDto, ApiResponse>, callback: grpc.sendUnaryData<ApiResponse>) =>
+    confirm: (call: grpc.ServerUnaryCall<ConfirmDto, ApiResponseException>, callback: grpc.sendUnaryData<string>) =>
       void confirm(call, callback),
 
-    unsubscribe: (call: grpc.ServerUnaryCall<UnsubscribeDto, ApiResponse>, callback: grpc.sendUnaryData<ApiResponse>) =>
-      void unsubscribe(call, callback),
+    unsubscribe: (
+      call: grpc.ServerUnaryCall<UnsubscribeDto, ApiResponseException>,
+      callback: grpc.sendUnaryData<string>,
+    ) => void unsubscribe(call, callback),
 
     getSubscriptions: (
-      call: grpc.ServerUnaryCall<GetSubscriptionsDto, GetSubscriptionsResponse>,
-      callback: grpc.sendUnaryData<GetSubscriptionsResponse>,
+      call: grpc.ServerUnaryCall<GetSubscriptionsDto, MinifiedSubscription[]>,
+      callback: grpc.sendUnaryData<MinifiedSubscription[]>,
     ) => void getSubscriptions(call, callback),
   });
 

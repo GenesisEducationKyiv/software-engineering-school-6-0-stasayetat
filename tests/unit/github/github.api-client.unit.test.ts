@@ -1,6 +1,6 @@
 import { GithubApiClient } from '@shared/apis';
 import { redis } from '@shared/redis';
-import { E } from '@shared/types';
+import { ApiResponseExceptionCode, E } from '@shared/types';
 import axios from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -56,7 +56,7 @@ describe('GithubApiClient', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.status).toBe(404);
+        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
       }
     });
 
@@ -72,7 +72,7 @@ describe('GithubApiClient', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.status).toBe(429);
+        expect(result.value.code).toBe(ApiResponseExceptionCode.RATE_LIMIT);
       }
     });
 
@@ -84,7 +84,7 @@ describe('GithubApiClient', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.status).toBe(500);
+        expect(result.value.code).toBe(ApiResponseExceptionCode.GENERAL_FAILURE);
       }
     });
   });

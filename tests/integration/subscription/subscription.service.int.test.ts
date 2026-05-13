@@ -4,7 +4,7 @@ import { RepoService } from '@modules/subscription/service/repo.service';
 import { SubscriptionService } from '@modules/subscription/service/subscription.service';
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
-import { E, TagsResponse } from '@shared/types';
+import { ApiResponseExceptionCode, E, TagsResponse } from '@shared/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('SubscriptionService (integration)', () => {
@@ -37,7 +37,7 @@ describe('SubscriptionService (integration)', () => {
     it('should create repo and subscription in DB', async () => {
       const result = await service.subscribe('test@gmail.com', 'facebook/react');
 
-      expect(result.status).toBe(200);
+      expect(result.tag).toBe('right');
 
       const repoInDb = await db.select().from(repos);
       expect(repoInDb).toHaveLength(1);
@@ -57,15 +57,18 @@ describe('SubscriptionService (integration)', () => {
 
       const result = await service.subscribe('test@gmail.com', 'facebook/react');
 
-      expect(result.status).toBe(409);
+      expect(result.tag).toBe('left');
+
+      if(E.isLeft(result)) {
+      expect(result.value.code).toBe(ApiResponseExceptionCode.ALREADY_EXISTS);
+      }
     });
 
     it('should resend confirmation if subscription exists but not confirmed', async () => {
       await service.subscribe('test@gmail.com', 'facebook/react');
       const result = await service.subscribe('test@gmail.com', 'facebook/react');
 
-      expect(result.status).toBe(200);
-      expect(result.message).toBe('Confirmation notification resent');
+      expect(result.tag).toBe('right');
 
       const subscriptionsInDb = await db.select().from(subscriptions);
       expect(subscriptionsInDb).toHaveLength(1);
@@ -84,12 +87,16 @@ describe('SubscriptionService (integration)', () => {
 
     it('should return 404 if github repo has no releases', async () => {
       vi.mocked(mockTagFetcher.getTags).mockResolvedValue(
-        E.left({ status: 404, message: 'Not found' }),
+        E.left({ code: ApiResponseExceptionCode.NOT_FOUND, message: 'Not found' }),
       );
 
       const result = await service.subscribe('test@gmail.com', 'nonexistent/repo');
 
-      expect(result.status).toBe(404);
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+      }
 
       const reposInDb = await db.select().from(repos);
       expect(reposInDb).toHaveLength(0);
@@ -103,7 +110,7 @@ describe('SubscriptionService (integration)', () => {
 
       const result = await service.confirmSubscribe(token);
 
-      expect(result.status).toBe(200);
+      expect(E.isRight(result)).toBe(true);
 
       const subscriptionInDb = (await db.select().from(subscriptions))[0];
       expect(subscriptionInDb.confirmed).toBe(true);
@@ -112,7 +119,11 @@ describe('SubscriptionService (integration)', () => {
     it('should return 404 for invalid token', async () => {
       const result = await service.confirmSubscribe('00000000-0000-0000-0000-000000000000');
 
-      expect(result.status).toBe(404);
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+      }
     });
   });
 
@@ -125,7 +136,7 @@ describe('SubscriptionService (integration)', () => {
       const unsubscribeToken = (await db.select().from(subscriptions))[0].token;
       const result = await service.confirmUnsubscribe(unsubscribeToken);
 
-      expect(result.status).toBe(200);
+      expect(E.isRight(result)).toBe(true);
 
       const subscriptionsInDb = await db.select().from(subscriptions);
       expect(subscriptionsInDb).toHaveLength(0);
@@ -165,10 +176,12 @@ describe('SubscriptionService (integration)', () => {
       await service.subscribe('test@gmail.com', 'microsoft/typescript');
 
       const result = await service.getAllSubscriptionsByEmail('test@gmail.com');
+      expect(E.isRight(result)).toBe(true);
 
-      expect(result.status).toBe(200);
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].repo).toBe('facebook/react');
+      if (E.isRight(result)) {
+        expect(result.value).toHaveLength(1);
+        expect(result.value[0].repo).toBe('facebook/react');
+      }
     });
 
     it('should return empty array if no confirmed subscriptions', async () => {
@@ -176,8 +189,11 @@ describe('SubscriptionService (integration)', () => {
 
       const result = await service.getAllSubscriptionsByEmail('test@gmail.com');
 
-      expect(result.status).toBe(200);
-      expect(result.data).toHaveLength(0);
+      expect(E.isRight(result)).toBe(true);
+
+      if  (E.isRight(result)) {
+        expect(result.value).toHaveLength(0);
+      }
     });
   });
 });

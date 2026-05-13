@@ -3,7 +3,7 @@ import { ScannerService } from '@modules/scanner/service/scanner.service';
 import { RepoRepository } from '@modules/subscription/repository/repo.repository';
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
 import { NotificationEmailService } from '@shared/notification/notification.email-service';
-import { E } from '@shared/types';
+import { ApiResponseExceptionCode, E } from '@shared/types';
 import { beforeEach, describe, expect, it, MockedObject, vi } from 'vitest';
 
 const mockRepo = {
@@ -96,7 +96,7 @@ describe('ScannerService', () => {
 
       repoRepository.getAllRepos.mockResolvedValue([mockRepo, mockRepo2]);
       repoTagFetcher.getTags
-        .mockResolvedValueOnce(E.left({ currentRepo: mockRepo, error: { status: 500, message: 'Error' } }))
+        .mockResolvedValueOnce(E.left({ currentRepo: mockRepo, error: { code: ApiResponseExceptionCode.GENERAL_FAILURE, message: 'Error' } }))
         .mockResolvedValueOnce(E.right({ currentRepo: mockRepo2, latestTag: 'v2.0.0' }));
 
       subscriptionRepository.getSubscriptionsByRepoIds.mockResolvedValue([

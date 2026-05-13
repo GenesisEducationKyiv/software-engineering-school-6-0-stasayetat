@@ -9,5 +9,3 @@ export type MinifiedSubscription = {
   confirmed: boolean;
   last_seen_tag: string;
 };
-
-export type GetSubscriptionsResponse = { status: number; data: MinifiedSubscription[] };

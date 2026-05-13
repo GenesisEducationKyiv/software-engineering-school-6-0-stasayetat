@@ -1,6 +1,6 @@
 import { RepoScanError, RepoScanSuccess } from '@modules/scanner/scanner.types';
 import { TagFetcher, TAGS_FETCHER } from '@shared/apis/tags-fetcher.interface';
-import { E } from '@shared/types';
+import { ApiResponseExceptionCode, E } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import Bottleneck from 'bottleneck';
 import ms from 'ms';
@@ -34,7 +34,7 @@ export class RepoTagFetcher {
     if (!tagsResponseEither.value.length) {
       return E.left({
         currentRepo: repo,
-        error: { status: 404, message: 'Repository has no tags' },
+        error: { code: ApiResponseExceptionCode.NOT_FOUND, message: 'Repository has no tags' },
       });
     }
 
