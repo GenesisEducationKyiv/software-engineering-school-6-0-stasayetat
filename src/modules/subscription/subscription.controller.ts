@@ -5,6 +5,8 @@ import { apiKeyMiddleware } from '@shared/middlewares/api-key.middleware';
 import { Request, Response, Router } from 'express';
 import { container } from 'tsyringe';
 
+const subscriptionService = container.resolve(SubscriptionService);
+
 export const subscriptionRouter = Router();
 
 subscriptionRouter.post(
@@ -14,7 +16,7 @@ subscriptionRouter.post(
   async (req: Request, res: Response) => {
     const { email, repo } = req.body as SubscribeDto;
 
-    const { status, message } = await container.resolve(SubscriptionService).subscribe(email, repo);
+    const { status, message } = await subscriptionService.subscribe(email, repo);
 
     return res.status(status).json({ message });
   },
@@ -23,7 +25,7 @@ subscriptionRouter.post(
 subscriptionRouter.get('/confirm/:token', validateParams(ConfirmDto), async (req: Request, res: Response) => {
   const { token } = req.params as { token: string };
 
-  const { status, message } = await container.resolve(SubscriptionService).confirmSubscribe(token);
+  const { status, message } = await subscriptionService.confirmSubscribe(token);
 
   return res.status(status).json({ message });
 });
@@ -31,7 +33,7 @@ subscriptionRouter.get('/confirm/:token', validateParams(ConfirmDto), async (req
 subscriptionRouter.get('/unsubscribe/:token', validateParams(UnsubscribeDto), async (req: Request, res: Response) => {
   const { token } = req.params as { token: string };
 
-  const { status, message } = await container.resolve(SubscriptionService).confirmUnsubscribe(token);
+  const { status, message } = await subscriptionService.confirmUnsubscribe(token);
 
   return res.status(status).json({ message });
 });
@@ -43,7 +45,7 @@ subscriptionRouter.get(
   async (req: Request, res: Response) => {
     const { email } = req.query as { email: string };
 
-    const { status, data } = await container.resolve(SubscriptionService).getAllSubscriptionsByEmail(email);
+    const { status, data } = await subscriptionService.getAllSubscriptionsByEmail(email);
 
     return res.status(status).json({ data });
   },

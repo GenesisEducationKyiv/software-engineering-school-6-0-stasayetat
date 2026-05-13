@@ -5,8 +5,7 @@ import {
 import { RepoService } from '@modules/subscription/service/repo.service';
 import { logger } from '@shared/logger';
 import { activeSubscriptionCount, subscriptionsTotal } from '@shared/metrics';
-import { NotificationEmailService } from '@shared/notification';
-import { NOTIFICATION_SERVICE } from '@shared/notification/notification-service.interface';
+import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
 import { ApiResponse, E, GetSubscriptionsResponse, MinifiedSubscription, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { inject, injectable } from 'tsyringe';
@@ -15,7 +14,7 @@ import { inject, injectable } from 'tsyringe';
 export class SubscriptionService {
   constructor(
     @inject(SUBSCRIPTION_REPOSITORY) private readonly subscriptionRepository: ISubscriptionRepository,
-    @inject(NOTIFICATION_SERVICE) private readonly notificationEmailService: NotificationEmailService,
+    @inject(NOTIFICATION_SERVICE) private readonly notificationService: NotificationService,
     private readonly repoService: RepoService,
   ) {}
 
@@ -119,11 +118,11 @@ export class SubscriptionService {
       return responseEither.value;
     }
 
-    logger.info(`Confirmation for ${repository.repo} successfully sent to ${email}`);
+    logger.info(`Email for ${repository.repo} successfully sent to ${email}`);
 
     subscriptionsTotal.inc({ status: 'sent' });
 
-    return { status: 200, message: 'Confirmation notification sent' };
+    return { status: 200, message: 'Email notification sent' };
   }
 
   private async handleExistingSubscription(
@@ -157,7 +156,7 @@ export class SubscriptionService {
     token: string,
     repo: string,
   ): Promise<E.Either<ApiResponse, null>> {
-    const responseEither = await this.notificationEmailService.sendConfirmationEmail(email, token, repo);
+    const responseEither = await this.notificationService.sendConfirmationEmail(email, token, repo);
 
     if (E.isLeft(responseEither)) {
       subscriptionsTotal.inc({ status: 'failed_to_send_email' });

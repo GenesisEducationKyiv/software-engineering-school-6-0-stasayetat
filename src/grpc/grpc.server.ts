@@ -23,6 +23,8 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 
 const proto = grpc.loadPackageDefinition(packageDefinition) as unknown as ProtoGrpcType;
 
+const subscriptionService = container.resolve(SubscriptionService);
+
 async function subscribe(
   call: grpc.ServerUnaryCall<SubscribeDto, ApiResponse>,
   callback: grpc.sendUnaryData<ApiResponse>,
@@ -33,7 +35,7 @@ async function subscribe(
     return;
   }
 
-  const result = await container.resolve(SubscriptionService).subscribe(dto.email, dto.repo);
+  const result = await subscriptionService.subscribe(dto.email, dto.repo);
   callback(null, result);
 }
 
@@ -44,7 +46,7 @@ async function confirm(call: grpc.ServerUnaryCall<ConfirmDto, ApiResponse>, call
     return;
   }
 
-  const result = await container.resolve(SubscriptionService).confirmSubscribe(dto.token);
+  const result = await subscriptionService.confirmSubscribe(dto.token);
   callback(null, result);
 }
 
@@ -58,7 +60,7 @@ async function unsubscribe(
     return;
   }
 
-  const result = await container.resolve(SubscriptionService).confirmUnsubscribe(dto.token);
+  const result = await subscriptionService.confirmUnsubscribe(dto.token);
   callback(null, result);
 }
 
@@ -72,7 +74,7 @@ async function getSubscriptions(
     return;
   }
 
-  const result = await container.resolve(SubscriptionService).getAllSubscriptionsByEmail(dto.email);
+  const result = await subscriptionService.getAllSubscriptionsByEmail(dto.email);
   callback(null, result);
 }
 
