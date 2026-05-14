@@ -2,8 +2,25 @@ import { subscriptionRouter } from '@modules/subscription';
 import { env } from '@shared/env';
 import express from 'express';
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('tsyringe', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('tsyringe')>();
+
+  const mockSubscriptionService = {
+    subscribe: vi.fn(),
+    confirmSubscribe: vi.fn(),
+    confirmUnsubscribe: vi.fn(),
+    getAllSubscriptionsByEmail: vi.fn()
+  };
+
+  return {
+    ...actual,
+    container: {
+      resolve: vi.fn().mockReturnValue(mockSubscriptionService),
+    },
+  };
+});
 const app = express();
 app.use(express.json());
 app.use('/api', subscriptionRouter);
