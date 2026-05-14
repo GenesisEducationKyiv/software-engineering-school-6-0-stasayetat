@@ -6,7 +6,7 @@ import { unpackOrThrowException } from '@shared/utils';
 import { Request, Response, Router } from 'express';
 import { container } from 'tsyringe';
 
-const getService = () => container.resolve(SubscriptionService);
+const subscriptionService = container.resolve(SubscriptionService);
 
 export const subscriptionRouter = Router();
 
@@ -17,7 +17,7 @@ subscriptionRouter.post(
   async (req: Request, res: Response) => {
     const { email, repo } = req.body as SubscribeDto;
 
-    const subscribeResultEither = await getService().subscribe(email, repo);
+    const subscribeResultEither = await subscriptionService.subscribe(email, repo);
 
     unpackOrThrowException(subscribeResultEither);
 
@@ -28,7 +28,7 @@ subscriptionRouter.post(
 subscriptionRouter.get('/confirm/:token', validateParams(ConfirmDto), async (req: Request, res: Response) => {
   const { token } = req.params as { token: string };
 
-  const confirmSubscriptionEither = await getService().confirmSubscribe(token);
+  const confirmSubscriptionEither = await subscriptionService.confirmSubscribe(token);
 
   unpackOrThrowException(confirmSubscriptionEither);
 
@@ -38,7 +38,7 @@ subscriptionRouter.get('/confirm/:token', validateParams(ConfirmDto), async (req
 subscriptionRouter.get('/unsubscribe/:token', validateParams(UnsubscribeDto), async (req: Request, res: Response) => {
   const { token } = req.params as { token: string };
 
-  const confirmUnsubscriptionEither = await getService().confirmUnsubscribe(token);
+  const confirmUnsubscriptionEither = await subscriptionService.confirmUnsubscribe(token);
 
   unpackOrThrowException(confirmUnsubscriptionEither);
 
@@ -52,7 +52,7 @@ subscriptionRouter.get(
   async (req: Request, res: Response) => {
     const { email } = req.query as { email: string };
 
-    const allSubscriptionsEither = await getService().getAllSubscriptionsByEmail(email);
+    const allSubscriptionsEither = await subscriptionService.getAllSubscriptionsByEmail(email);
 
     const data = unpackOrThrowException(allSubscriptionsEither);
 
