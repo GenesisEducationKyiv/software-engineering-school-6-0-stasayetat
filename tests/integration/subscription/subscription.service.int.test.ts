@@ -37,7 +37,7 @@ describe('SubscriptionService (integration)', () => {
     it('should create repo and subscription in DB', async () => {
       const result = await service.subscribe('test@gmail.com', 'facebook/react');
 
-      expect(result.tag).toBe('right');
+      expect(E.isRight(result)).toBe(true);
 
       const repoInDb = await db.select().from(repos);
       expect(repoInDb).toHaveLength(1);
@@ -57,7 +57,7 @@ describe('SubscriptionService (integration)', () => {
 
       const result = await service.subscribe('test@gmail.com', 'facebook/react');
 
-      expect(result.tag).toBe('left');
+      expect(E.isLeft(result)).toBe(true);
 
       if(E.isLeft(result)) {
       expect(result.value.code).toBe(ApiResponseExceptionCode.ALREADY_EXISTS);
@@ -68,7 +68,7 @@ describe('SubscriptionService (integration)', () => {
       await service.subscribe('test@gmail.com', 'facebook/react');
       const result = await service.subscribe('test@gmail.com', 'facebook/react');
 
-      expect(result.tag).toBe('right');
+      expect(E.isRight(result)).toBe(true);
 
       const subscriptionsInDb = await db.select().from(subscriptions);
       expect(subscriptionsInDb).toHaveLength(1);
