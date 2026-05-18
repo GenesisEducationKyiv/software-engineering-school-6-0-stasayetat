@@ -5,11 +5,17 @@ import { SubscriptionService } from '@modules/subscription/service/subscription.
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
 import { ApiResponseExceptionCode, E, TagsResponse } from '@shared/types';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('SubscriptionService (integration)', () => {
   let service: SubscriptionService;
   let mockTagFetcher: TagFetcher;
+
+  afterAll(async () => {
+    await db.delete(subscriptions);
+    await db.delete(repos);
+    await db.$client.end();
+  });
 
   beforeEach(async () => {
     vi.clearAllMocks();

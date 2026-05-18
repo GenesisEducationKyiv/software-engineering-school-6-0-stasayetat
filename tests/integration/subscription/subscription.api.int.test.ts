@@ -11,7 +11,7 @@ import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/
 import { ApiResponseExceptionCode, E, TagsResponse } from '@shared/types';
 import request from 'supertest';
 import { container } from 'tsyringe';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { server } from '../../../src/server';
 
@@ -38,6 +38,13 @@ describe('Subscription API (integration)', () => {
     mockTagFetcher.getTags.mockResolvedValue(E.right([{ name: 'v1.0.0' }] as TagsResponse));
     mockNotificationService.sendConfirmationEmail.mockResolvedValue(E.right({ success: true }));
     mockNotificationService.sendReleaseNotification.mockResolvedValue(undefined);
+  });
+
+  afterAll(async () => {
+    await db.delete(subscriptions);
+    await db.delete(repos);
+    await db.$client.end();
+    container.reset();
   });
 
   describe('POST /api/subscribe', () => {
