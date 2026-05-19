@@ -42,7 +42,7 @@ export class SubscriptionService {
 
     activeSubscriptionCount.inc();
 
-    logger.info(`Subscription confirmed successfully for ${token}`);
+    logger.info(`Subscription confirmed successfully`);
 
     return E.right(undefined);
   }
@@ -67,7 +67,7 @@ export class SubscriptionService {
       await this.repoService.removeRepo(repoId);
     }
 
-    logger.info(`Subscription removed successfully for ${token}`);
+    logger.info(`Subscription removed successfully`);
 
     subscriptionsTotal.inc({ status: 'unsubscribed' });
 
@@ -96,7 +96,7 @@ export class SubscriptionService {
     const subscription = await this.subscriptionRepository.getSubscriptionByToken(token, isConfirmed);
 
     if (!subscription) {
-      logger.info(`Subscription for ${token} not found`);
+      logger.info(`Subscription not found`);
 
       return E.left({ code: ApiResponseExceptionCode.NOT_FOUND, message: 'No token found' });
     }
