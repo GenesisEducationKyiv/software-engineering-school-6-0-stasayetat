@@ -1,9 +1,10 @@
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
+import { E } from '@shared/either';
 import { env } from '@shared/env';
 import { logger } from '@shared/logger';
 import { githubApiDuration, githubApiRequestsTotal } from '@shared/metrics/github.metrics';
 import { getOrSet } from '@shared/redis';
-import { ApiResponseException, ApiResponseExceptionCode, E, TagsResponse } from '@shared/types';
+import { ApiResponseException, ApiResponseExceptionCode, TagsResponse } from '@shared/types';
 import { getErrorMessage } from '@shared/utils';
 import { resolveRetryAfterMs } from '@shared/utils/github.utils';
 import axios, { AxiosRequestConfig } from 'axios';

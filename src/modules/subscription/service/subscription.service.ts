@@ -3,10 +3,11 @@ import {
   SUBSCRIPTION_REPOSITORY,
 } from '@modules/subscription/repository/subscription.repository.interface';
 import { RepoService } from '@modules/subscription/service/repo.service';
+import { E } from '@shared/either';
 import { logger } from '@shared/logger';
 import { activeSubscriptionCount, subscriptionsTotal } from '@shared/metrics';
 import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
-import { ApiResponseException, ApiResponseExceptionCode, E, MinifiedSubscription, Subscription } from '@shared/types';
+import { ApiResponseException, ApiResponseExceptionCode, MinifiedSubscription, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { inject, injectable } from 'tsyringe';
 

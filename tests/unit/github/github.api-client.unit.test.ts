@@ -1,6 +1,7 @@
 import { GithubApiClient } from '@shared/apis';
+import { E } from '@shared/either';
 import { redis } from '@shared/redis';
-import { ApiResponseExceptionCode, E } from '@shared/types';
+import { ApiResponseExceptionCode } from '@shared/types';
 import axios from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 

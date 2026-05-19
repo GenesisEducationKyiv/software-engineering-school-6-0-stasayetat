@@ -1,6 +1,7 @@
 import { RepoScanError, RepoScanSuccess } from '@modules/scanner/scanner.types';
 import { TagFetcher, TAGS_FETCHER } from '@shared/apis/tags-fetcher.interface';
-import { ApiResponseExceptionCode, E } from '@shared/types';
+import { E } from '@shared/either';
+import { ApiResponseExceptionCode } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import Bottleneck from 'bottleneck';
 import ms from 'ms';

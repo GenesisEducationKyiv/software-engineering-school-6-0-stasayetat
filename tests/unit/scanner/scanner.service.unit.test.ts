@@ -2,8 +2,9 @@ import { RepoTagFetcher } from '@modules/scanner/service/repo-tag.fetcher';
 import { ScannerService } from '@modules/scanner/service/scanner.service';
 import { RepoRepository } from '@modules/subscription/repository/repo.repository';
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
+import { E } from '@shared/either';
 import { NotificationEmailService } from '@shared/notification/notification.email-service';
-import { ApiResponseExceptionCode, E } from '@shared/types';
+import { ApiResponseExceptionCode } from '@shared/types';
 import { beforeEach, describe, expect, it, MockedObject, vi } from 'vitest';
 
 const mockRepo = {

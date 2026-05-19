@@ -1,3 +1,4 @@
+import { E } from '@shared/either';
 import { logger } from '@shared/logger';
 import { emailSentTotal } from '@shared/metrics';
 import {
@@ -8,7 +9,7 @@ import {
 } from '@shared/notification/email.utils';
 import { EMAIL_SENDER, EmailSender } from '@shared/notification/email-sender.interface';
 import { NotificationService } from '@shared/notification/notification-service.interface';
-import { E, FailureResult, SuccessResult } from '@shared/types';
+import { FailureResult, SuccessResult } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { getErrorMessage } from '@shared/utils';
 import { inject, injectable } from 'tsyringe';

@@ -4,7 +4,8 @@ import { RepoService } from '@modules/subscription/service/repo.service';
 import { SubscriptionService } from '@modules/subscription/service/subscription.service';
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
-import { ApiResponseExceptionCode, E, TagsResponse } from '@shared/types';
+import { E } from '@shared/either';
+import { ApiResponseExceptionCode, TagsResponse } from '@shared/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('SubscriptionService (integration)', () => {

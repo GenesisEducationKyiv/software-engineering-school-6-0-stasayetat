@@ -1,5 +1,6 @@
+import { E } from '@shared/either';
 import { logger } from '@shared/logger';
-import { ApiResponseException, ApiResponseExceptionCode, E } from '@shared/types';
+import { ApiResponseException, ApiResponseExceptionCode } from '@shared/types';
 import { ErrorRequestHandler } from 'express';
 
 export class HttpException extends Error {

@@ -1,8 +1,9 @@
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
 import { RepoService } from '@modules/subscription/service/repo.service';
 import { SubscriptionService } from '@modules/subscription/service/subscription.service';
+import { E } from '@shared/either';
 import { NotificationEmailService } from '@shared/notification/notification.email-service';
-import { ApiResponseExceptionCode, E } from '@shared/types';
+import { ApiResponseExceptionCode } from '@shared/types';
 import { beforeEach, describe, expect, it, MockedObject, vi } from 'vitest';
 
 const mockRepo = {

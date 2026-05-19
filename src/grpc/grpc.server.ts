@@ -2,8 +2,9 @@ import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import { SubscriptionService } from '@modules/subscription';
 import { ConfirmDto, GetSubscriptionsDto, SubscribeDto, UnsubscribeDto } from '@shared/dtos';
+import { E } from '@shared/either';
 import { logger } from '@shared/logger';
-import { ApiResponseException, E, MinifiedSubscription } from '@shared/types';
+import { ApiResponseException, MinifiedSubscription } from '@shared/types';
 import path from 'path';
 import { container } from 'tsyringe';
 

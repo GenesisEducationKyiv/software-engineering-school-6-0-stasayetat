@@ -4,7 +4,8 @@ import { RepoRepository } from '@modules/subscription/repository/repo.repository
 import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
-import { ApiResponseExceptionCode, E, TagsResponse } from '@shared/types';
+import { E } from '@shared/either';
+import { ApiResponseExceptionCode, TagsResponse } from '@shared/types';
 import { eq } from 'drizzle-orm';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
