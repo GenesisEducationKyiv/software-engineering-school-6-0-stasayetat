@@ -4,7 +4,7 @@ import { SubscriptionService } from '@modules/subscription';
 import { ConfirmDto, GetSubscriptionsDto, SubscribeDto, UnsubscribeDto } from '@shared/dtos';
 import { E } from '@shared/either';
 import { logger } from '@shared/logger';
-import { ApiResponseException, MinifiedSubscription } from '@shared/types';
+import { DomainError, MinifiedSubscription } from '@shared/types';
 import path from 'path';
 import { container } from 'tsyringe';
 
@@ -27,10 +27,7 @@ const proto = grpc.loadPackageDefinition(packageDefinition) as unknown as ProtoG
 
 const subscriptionService = container.resolve(SubscriptionService);
 
-async function subscribe(
-  call: grpc.ServerUnaryCall<SubscribeDto, ApiResponseException>,
-  callback: grpc.sendUnaryData<string>,
-) {
+async function subscribe(call: grpc.ServerUnaryCall<SubscribeDto, DomainError>, callback: grpc.sendUnaryData<string>) {
   const dto = await validateGrpc(SubscribeDto, call.request, callback);
 
   if (!dto) {
@@ -46,10 +43,7 @@ async function subscribe(
   callback(null, 'Email notification sent');
 }
 
-async function confirm(
-  call: grpc.ServerUnaryCall<ConfirmDto, ApiResponseException>,
-  callback: grpc.sendUnaryData<string>,
-) {
+async function confirm(call: grpc.ServerUnaryCall<ConfirmDto, DomainError>, callback: grpc.sendUnaryData<string>) {
   const dto = await validateGrpc(ConfirmDto, call.request, callback);
 
   if (!dto) {
@@ -66,7 +60,7 @@ async function confirm(
 }
 
 async function unsubscribe(
-  call: grpc.ServerUnaryCall<UnsubscribeDto, ApiResponseException>,
+  call: grpc.ServerUnaryCall<UnsubscribeDto, DomainError>,
   callback: grpc.sendUnaryData<string>,
 ) {
   const dto = await validateGrpc(UnsubscribeDto, call.request, callback);
@@ -109,16 +103,14 @@ export function startGrpcServer(port: number) {
   });
 
   server.addService(proto.subscription.SubscriptionService.service, {
-    subscribe: (call: grpc.ServerUnaryCall<SubscribeDto, ApiResponseException>, callback: grpc.sendUnaryData<string>) =>
+    subscribe: (call: grpc.ServerUnaryCall<SubscribeDto, DomainError>, callback: grpc.sendUnaryData<string>) =>
       void subscribe(call, callback),
 
-    confirm: (call: grpc.ServerUnaryCall<ConfirmDto, ApiResponseException>, callback: grpc.sendUnaryData<string>) =>
+    confirm: (call: grpc.ServerUnaryCall<ConfirmDto, DomainError>, callback: grpc.sendUnaryData<string>) =>
       void confirm(call, callback),
 
-    unsubscribe: (
-      call: grpc.ServerUnaryCall<UnsubscribeDto, ApiResponseException>,
-      callback: grpc.sendUnaryData<string>,
-    ) => void unsubscribe(call, callback),
+    unsubscribe: (call: grpc.ServerUnaryCall<UnsubscribeDto, DomainError>, callback: grpc.sendUnaryData<string>) =>
+      void unsubscribe(call, callback),
 
     getSubscriptions: (
       call: grpc.ServerUnaryCall<GetSubscriptionsDto, MinifiedSubscription[]>,

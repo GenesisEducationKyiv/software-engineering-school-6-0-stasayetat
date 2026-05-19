@@ -1,9 +1,9 @@
-import { ApiResponseException, Subscription } from '@shared/types';
+import { DomainError, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 
 export type RepoScanError = {
   currentRepo: Repository;
-  error: ApiResponseException;
+  error: DomainError;
 };
 
 export type RepoScanSuccess = {

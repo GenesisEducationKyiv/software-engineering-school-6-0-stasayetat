@@ -3,7 +3,7 @@ import { RepoService } from '@modules/subscription/service/repo.service';
 import { SubscriptionService } from '@modules/subscription/service/subscription.service';
 import { E } from '@shared/either';
 import { NotificationEmailService } from '@shared/notification/notification.email-service';
-import { ApiResponseExceptionCode } from '@shared/types';
+import { DomainErrorCode } from '@shared/types';
 import { beforeEach, describe, expect, it, MockedObject, vi } from 'vitest';
 
 const mockRepo = {
@@ -62,7 +62,7 @@ describe('SubscriptionService', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.code).toBe(ApiResponseExceptionCode.ALREADY_EXISTS);
+        expect(result.value.code).toBe(DomainErrorCode.SUBSCRIPTION_ALREADY_EXISTS);
         expect(notificationEmailService.sendConfirmationEmail).not.toHaveBeenCalled();
       }
     });
@@ -87,32 +87,32 @@ describe('SubscriptionService', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.code).toBe(ApiResponseExceptionCode.GENERAL_FAILURE);
+        expect(result.value.code).toBe(DomainErrorCode.EMAIL_SEND_FAILURE);
       }
     });
 
     it('should return 404 if repo service returns an error', async () => {
-      repoService.findOrCreateRepo.mockResolvedValue(E.left({ code: ApiResponseExceptionCode.NOT_FOUND, message: 'Not found' }));
+      repoService.findOrCreateRepo.mockResolvedValue(E.left({ code: DomainErrorCode.GITHUB_REPO_NOT_FOUND, message: 'Not found' }));
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+        expect(result.value.code).toBe(DomainErrorCode.GITHUB_REPO_NOT_FOUND);
         expect(subscriptionRepository.createNewSubscription).not.toHaveBeenCalled();
       }
     });
 
     it('should return 404 if repo has no tags', async () => {
-      repoService.findOrCreateRepo.mockResolvedValue(E.left({ code: ApiResponseExceptionCode.NOT_FOUND, message: 'Repository has no tags' }));
+      repoService.findOrCreateRepo.mockResolvedValue(E.left({ code: DomainErrorCode.REPO_HAS_NO_TAGS, message: 'Repository has no tags' }));
 
       const result = await service.subscribe('test@gmail.com', 'owner/repo');
 
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+        expect(result.value.code).toBe(DomainErrorCode.REPO_HAS_NO_TAGS);
         expect(result.value.message).toBe('Repository has no tags');
       }
     });
@@ -137,7 +137,7 @@ describe('SubscriptionService', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.code).toBe(ApiResponseExceptionCode.GENERAL_FAILURE);
+        expect(result.value.code).toBe(DomainErrorCode.EMAIL_SEND_FAILURE);
       }
     });
 
@@ -159,7 +159,7 @@ describe('SubscriptionService', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.code).toBe(ApiResponseExceptionCode.GENERAL_FAILURE);
+        expect(result.value.code).toBe(DomainErrorCode.EMAIL_SEND_FAILURE);
         expect(result.value.message).toBe('SMTP error');
       }
     });
@@ -172,7 +172,7 @@ describe('SubscriptionService', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+        expect(result.value.code).toBe(DomainErrorCode.SUBSCRIPTION_NOT_FOUND);
         expect(subscriptionRepository.confirmSubscription).not.toHaveBeenCalled();
       }
     });
@@ -194,7 +194,7 @@ describe('SubscriptionService', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+        expect(result.value.code).toBe(DomainErrorCode.SUBSCRIPTION_NOT_FOUND);
         expect(subscriptionRepository.removeSubscription).not.toHaveBeenCalled();
       }
 

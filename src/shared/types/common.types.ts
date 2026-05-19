@@ -1,13 +1,15 @@
-export enum ApiResponseExceptionCode {
-  NOT_FOUND = 'NOT_FOUND',
-  RATE_LIMIT = 'RATE_LIMIT',
-  UNKNOWN = 'UNKNOWN',
-  GENERAL_FAILURE = 'GENERAL_FAILURE',
-  ALREADY_EXISTS = 'ALREADY_EXISTS',
+export enum DomainErrorCode {
+  SUBSCRIPTION_NOT_FOUND = 'SUBSCRIPTION_NOT_FOUND',
+  SUBSCRIPTION_ALREADY_EXISTS = 'SUBSCRIPTION_ALREADY_EXISTS',
+  EMAIL_SEND_FAILURE = 'EMAIL_SEND_FAILURE',
+  REPO_HAS_NO_TAGS = 'REPO_HAS_NO_TAGS',
+  GITHUB_RATE_LIMIT = 'GITHUB_RATE_LIMIT',
+  GITHUB_REPO_NOT_FOUND = 'GITHUB_REPO_NOT_FOUND',
+  GITHUB_API_ERROR = 'GITHUB_API_ERROR',
 }
 
-export type ApiResponseException = {
-  code: ApiResponseExceptionCode;
+export type DomainError = {
+  code: DomainErrorCode;
   message: string;
   body?: unknown;
 };

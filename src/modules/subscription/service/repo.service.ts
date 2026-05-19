@@ -3,7 +3,7 @@ import { TagFetcher, TAGS_FETCHER } from '@shared/apis/tags-fetcher.interface';
 import { E } from '@shared/either';
 import { logger } from '@shared/logger';
 import { totalReposCount } from '@shared/metrics';
-import { ApiResponseException, ApiResponseExceptionCode } from '@shared/types';
+import { DomainError, DomainErrorCode } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { inject, injectable } from 'tsyringe';
 
@@ -14,7 +14,7 @@ export class RepoService {
     @inject(TAGS_FETCHER) private readonly repoTagFetcher: TagFetcher,
   ) {}
 
-  async findOrCreateRepo(repo: string): Promise<E.Either<ApiResponseException, Repository>> {
+  async findOrCreateRepo(repo: string): Promise<E.Either<DomainError, Repository>> {
     const foundRepo = await this.repoRepository.findByRepo(repo);
 
     if (foundRepo) {
@@ -30,7 +30,7 @@ export class RepoService {
     totalReposCount.dec();
   }
 
-  private async createNewRepo(repo: string): Promise<E.Either<ApiResponseException, Repository>> {
+  private async createNewRepo(repo: string): Promise<E.Either<DomainError, Repository>> {
     const tagsResponseEither = await this.repoTagFetcher.getTags(repo);
 
     if (E.isLeft(tagsResponseEither)) {
@@ -42,7 +42,7 @@ export class RepoService {
     const tags = tagsResponseEither.value;
 
     if (!tags.length) {
-      return E.left({ code: ApiResponseExceptionCode.NOT_FOUND, message: 'Repository has no tags' });
+      return E.left({ code: DomainErrorCode.REPO_HAS_NO_TAGS, message: 'Repository has no tags' });
     }
 
     const newRepo = await this.repoRepository.createRepo(repo, tags[0].name);

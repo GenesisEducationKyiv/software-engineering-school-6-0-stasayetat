@@ -5,7 +5,7 @@ import { SubscriptionService } from '@modules/subscription/service/subscription.
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
 import { E } from '@shared/either';
-import { ApiResponseExceptionCode, TagsResponse } from '@shared/types';
+import { DomainErrorCode, TagsResponse } from '@shared/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('SubscriptionService (integration)', () => {
@@ -61,7 +61,7 @@ describe('SubscriptionService (integration)', () => {
       expect(result.tag).toBe('left');
 
       if(E.isLeft(result)) {
-      expect(result.value.code).toBe(ApiResponseExceptionCode.ALREADY_EXISTS);
+      expect(result.value.code).toBe(DomainErrorCode.SUBSCRIPTION_ALREADY_EXISTS);
       }
     });
 
@@ -88,7 +88,7 @@ describe('SubscriptionService (integration)', () => {
 
     it('should return 404 if github repo has no releases', async () => {
       vi.mocked(mockTagFetcher.getTags).mockResolvedValue(
-        E.left({ code: ApiResponseExceptionCode.NOT_FOUND, message: 'Not found' }),
+        E.left({ code: DomainErrorCode.GITHUB_REPO_NOT_FOUND, message: 'Not found' }),
       );
 
       const result = await service.subscribe('test@gmail.com', 'nonexistent/repo');
@@ -96,7 +96,7 @@ describe('SubscriptionService (integration)', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+        expect(result.value.code).toBe(DomainErrorCode.GITHUB_REPO_NOT_FOUND);
       }
 
       const reposInDb = await db.select().from(repos);
@@ -123,7 +123,7 @@ describe('SubscriptionService (integration)', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.code).toBe(ApiResponseExceptionCode.NOT_FOUND);
+        expect(result.value.code).toBe(DomainErrorCode.SUBSCRIPTION_NOT_FOUND);
       }
     });
   });
