@@ -49,7 +49,7 @@ describe('POST /api/subscribe', () => {
 });
 
 describe('GET /api/confirm/:token', () => {
-  it('should return 422 for invalid token', async () => {
+  it('should return 400 for invalid token', async () => {
     const res = await request(app)
       .get('/api/confirm/not-a-uuid');
 
@@ -58,7 +58,7 @@ describe('GET /api/confirm/:token', () => {
 });
 
 describe('GET /api/unsubscribe/:token', () => {
-  it('should return 422 for invalid token', async () => {
+  it('should return 400 for invalid token', async () => {
     const res = await request(app)
       .get('/api/unsubscribe/not-a-uuid');
 

@@ -49,26 +49,26 @@ describe('Subscription API (integration)', () => {
   });
 
   describe('POST /api/subscribe', () => {
-    it('returns 401 without API key', async () => {
+    it('should return 401 without API key', async () => {
       const res = await request(server)
         .post('/api/subscribe')
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       expect(res.status).toBe(401);
     });
 
-    it('returns 400 for invalid email', async () => {
+    it('should return 400 for invalid email', async () => {
       const res = await authed(request(server).post('/api/subscribe'))
         .send({ email: 'not-an-email', repo: 'owner/repo' });
       expect(res.status).toBe(400);
     });
 
-    it('returns 400 for invalid repo format', async () => {
+    it('should return 400 for invalid repo format', async () => {
       const res = await authed(request(server).post('/api/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'invalid-repo' });
       expect(res.status).toBe(400);
     });
 
-    it('returns 201 and creates subscription in DB', async () => {
+    it('should return 201 and creates subscription in DB', async () => {
       const res = await authed(request(server).post('/api/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
 
@@ -85,7 +85,7 @@ describe('Subscription API (integration)', () => {
       );
     });
 
-    it('returns 409 when subscription is already confirmed', async () => {
+    it('should return 409 when subscription is already confirmed', async () => {
       await authed(request(server).post('/api/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
 
@@ -97,7 +97,7 @@ describe('Subscription API (integration)', () => {
       expect(res.status).toBe(409);
     });
 
-    it('returns 201 and resends email when subscription exists but not confirmed', async () => {
+    it('should return 201 and resends email when subscription exists but not confirmed', async () => {
       await authed(request(server).post('/api/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
 
@@ -112,7 +112,7 @@ describe('Subscription API (integration)', () => {
       expect(subsInDb).toHaveLength(1);
     });
 
-    it('returns 404 when GitHub repo does not exist', async () => {
+    it('should return 404 when GitHub repo does not exist', async () => {
       mockTagFetcher.getTags.mockResolvedValue(
         E.left({ code: DomainErrorCode.GITHUB_REPO_NOT_FOUND, message: 'Not Found' }),
       );
@@ -124,17 +124,17 @@ describe('Subscription API (integration)', () => {
   });
 
   describe('GET /api/confirm/:token', () => {
-    it('returns 400 for non-UUID token', async () => {
+    it('should return 400 for non-UUID token', async () => {
       const res = await request(server).get('/api/confirm/not-a-uuid');
       expect(res.status).toBe(400);
     });
 
-    it('returns 404 for unknown token', async () => {
+    it('should return 404 for unknown token', async () => {
       const res = await request(server).get('/api/confirm/00000000-0000-0000-0000-000000000000');
       expect(res.status).toBe(404);
     });
 
-    it('returns 200 and sets subscription as confirmed', async () => {
+    it('should return 200 and sets subscription as confirmed', async () => {
       await authed(request(server).post('/api/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       const [sub] = await db.select().from(subscriptions);
@@ -148,17 +148,17 @@ describe('Subscription API (integration)', () => {
   });
 
   describe('GET /api/unsubscribe/:token', () => {
-    it('returns 400 for non-UUID token', async () => {
+    it('should return 400 for non-UUID token', async () => {
       const res = await request(server).get('/api/unsubscribe/not-a-uuid');
       expect(res.status).toBe(400);
     });
 
-    it('returns 404 for unknown token', async () => {
+    it('should return 404 for unknown token', async () => {
       const res = await request(server).get('/api/unsubscribe/00000000-0000-0000-0000-000000000000');
       expect(res.status).toBe(404);
     });
 
-    it('returns 200 and removes confirmed subscription', async () => {
+    it('should return 200 and removes confirmed subscription', async () => {
       await authed(request(server).post('/api/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       const [sub] = await db.select().from(subscriptions);
@@ -171,7 +171,7 @@ describe('Subscription API (integration)', () => {
       expect(subsInDb).toHaveLength(0);
     });
 
-    it('removes repo when last subscriber unsubscribes', async () => {
+    it('should remove repo when last subscriber unsubscribes', async () => {
       await authed(request(server).post('/api/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       const [sub] = await db.select().from(subscriptions);
@@ -184,28 +184,28 @@ describe('Subscription API (integration)', () => {
   });
 
   describe('GET /api/subscriptions', () => {
-    it('returns 401 without API key', async () => {
+    it('should return 401 without API key', async () => {
       const res = await request(server).get('/api/subscriptions?email=test@gmail.com');
       expect(res.status).toBe(401);
     });
 
-    it('returns 400 for invalid email', async () => {
+    it('should return 400 for invalid email', async () => {
       const res = await authed(request(server).get('/api/subscriptions?email=not-an-email'));
       expect(res.status).toBe(400);
     });
 
-    it('returns 400 for missing email', async () => {
+    it('should return 400 for missing email', async () => {
       const res = await authed(request(server).get('/api/subscriptions'));
       expect(res.status).toBe(400);
     });
 
-    it('returns 200 with empty array when no confirmed subscriptions', async () => {
+    it('should return 200 with empty array when no confirmed subscriptions', async () => {
       const res = await authed(request(server).get('/api/subscriptions?email=nobody@gmail.com'));
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual([]);
     });
 
-    it('returns 200 with confirmed subscriptions only', async () => {
+    it('should return 200 with confirmed subscriptions only', async () => {
       await authed(request(server).post('/api/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       const [sub] = await db.select().from(subscriptions);
