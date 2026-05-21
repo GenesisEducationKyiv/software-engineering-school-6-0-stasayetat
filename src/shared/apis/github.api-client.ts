@@ -1,9 +1,10 @@
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
+import { E } from '@shared/either';
 import { env } from '@shared/env';
 import { logger } from '@shared/logger';
 import { githubApiDuration, githubApiRequestsTotal } from '@shared/metrics/github.metrics';
 import { getOrSet } from '@shared/redis';
-import { ApiResponseException, ApiResponseExceptionCode, E, TagsResponse } from '@shared/types';
+import { DomainError, DomainErrorCode, TagsResponse } from '@shared/types';
 import { getErrorMessage } from '@shared/utils';
 import { resolveRetryAfterMs } from '@shared/utils/github.utils';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -23,7 +24,7 @@ export class GithubApiClient implements TagFetcher {
     },
   };
 
-  getTags = (repo: string): Promise<E.Either<ApiResponseException, TagsResponse>> => {
+  getTags = (repo: string): Promise<E.Either<DomainError, TagsResponse>> => {
     return getOrSet(
       `github:tags:${repo}`,
       ms('10 minutes'),
@@ -32,7 +33,7 @@ export class GithubApiClient implements TagFetcher {
     );
   };
 
-  getSimple = async <T>(path: string): Promise<E.Either<ApiResponseException, T>> => {
+  getSimple = async <T>(path: string): Promise<E.Either<DomainError, T>> => {
     const end = githubApiDuration.startTimer();
 
     try {
@@ -45,7 +46,7 @@ export class GithubApiClient implements TagFetcher {
         end({ status: 'rate_limited' });
 
         return E.left({
-          code: ApiResponseExceptionCode.RATE_LIMIT,
+          code: DomainErrorCode.GITHUB_RATE_LIMIT,
           body: `Retry after ${retryAfterMs}ms`,
           message: `GitHub API rate limit exceeded. Retry after ${retryAfterMs}ms`,
         });
@@ -55,7 +56,7 @@ export class GithubApiClient implements TagFetcher {
         githubApiRequestsTotal.inc({ status: 'failed' });
         end({ status: 'rate_limited' });
 
-        return E.left({ code: ApiResponseExceptionCode.NOT_FOUND, message: JSON.stringify(response.data) });
+        return E.left({ code: DomainErrorCode.GITHUB_REPO_NOT_FOUND, message: JSON.stringify(response.data) });
       }
 
       githubApiRequestsTotal.inc({ status: 'success' });
@@ -69,7 +70,7 @@ export class GithubApiClient implements TagFetcher {
 
       logger.error(`Error getting latest release: ${message}`);
 
-      return E.left({ code: ApiResponseExceptionCode.GENERAL_FAILURE, message });
+      return E.left({ code: DomainErrorCode.GITHUB_API_ERROR, message });
     }
   };
 }

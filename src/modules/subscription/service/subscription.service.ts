@@ -3,10 +3,11 @@ import {
   SUBSCRIPTION_REPOSITORY,
 } from '@modules/subscription/repository/subscription.repository.interface';
 import { RepoService } from '@modules/subscription/service/repo.service';
+import { E } from '@shared/either';
 import { logger } from '@shared/logger';
 import { activeSubscriptionCount, subscriptionsTotal } from '@shared/metrics';
 import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
-import { ApiResponseException, ApiResponseExceptionCode, E, MinifiedSubscription, Subscription } from '@shared/types';
+import { DomainError, DomainErrorCode, MinifiedSubscription, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { inject, injectable } from 'tsyringe';
 
@@ -18,7 +19,7 @@ export class SubscriptionService {
     private readonly repoService: RepoService,
   ) {}
 
-  async subscribe(email: string, repo: string): Promise<E.Either<ApiResponseException, void>> {
+  async subscribe(email: string, repo: string): Promise<E.Either<DomainError, void>> {
     const foundRepo = await this.repoService.findOrCreateRepo(repo);
 
     if (E.isLeft(foundRepo)) {
@@ -28,7 +29,7 @@ export class SubscriptionService {
     return await this.subscribeToExistingRepo(email, foundRepo.value);
   }
 
-  async confirmSubscribe(token: string): Promise<E.Either<ApiResponseException, void>> {
+  async confirmSubscribe(token: string): Promise<E.Either<DomainError, void>> {
     const foundSubscriptionEither = await this.findSubscriptionByTokenOrFail(token);
 
     if (E.isLeft(foundSubscriptionEither)) {
@@ -41,12 +42,12 @@ export class SubscriptionService {
 
     activeSubscriptionCount.inc();
 
-    logger.info(`Subscription confirmed successfully for ${token}`);
+    logger.info(`Subscription confirmed successfully`);
 
     return E.right(undefined);
   }
 
-  async confirmUnsubscribe(token: string): Promise<E.Either<ApiResponseException, void>> {
+  async confirmUnsubscribe(token: string): Promise<E.Either<DomainError, void>> {
     const foundSubscriptionEither = await this.findSubscriptionByTokenOrFail(token, true);
 
     if (E.isLeft(foundSubscriptionEither)) {
@@ -66,14 +67,14 @@ export class SubscriptionService {
       await this.repoService.removeRepo(repoId);
     }
 
-    logger.info(`Subscription removed successfully for ${token}`);
+    logger.info(`Subscription removed successfully`);
 
     subscriptionsTotal.inc({ status: 'unsubscribed' });
 
     return E.right(undefined);
   }
 
-  async getAllSubscriptionsByEmail(email: string): Promise<E.Either<ApiResponseException, MinifiedSubscription[]>> {
+  async getAllSubscriptionsByEmail(email: string): Promise<E.Either<DomainError, MinifiedSubscription[]>> {
     const foundSubscriptions = await this.subscriptionRepository.getAllActiveSubscriptionByEmail(email);
 
     const mappedValue = foundSubscriptions.map<MinifiedSubscription>(({ repos, subscriptions }) => ({
@@ -91,22 +92,19 @@ export class SubscriptionService {
   private async findSubscriptionByTokenOrFail(
     token: string,
     isConfirmed: boolean = false,
-  ): Promise<E.Either<ApiResponseException, Subscription>> {
+  ): Promise<E.Either<DomainError, Subscription>> {
     const subscription = await this.subscriptionRepository.getSubscriptionByToken(token, isConfirmed);
 
     if (!subscription) {
-      logger.info(`Subscription for ${token} not found`);
+      logger.info(`Subscription not found`);
 
-      return E.left({ code: ApiResponseExceptionCode.NOT_FOUND, message: 'No token found' });
+      return E.left({ code: DomainErrorCode.SUBSCRIPTION_NOT_FOUND, message: 'No token found' });
     }
 
     return E.right(subscription);
   }
 
-  private async subscribeToExistingRepo(
-    email: string,
-    repository: Repository,
-  ): Promise<E.Either<ApiResponseException, void>> {
+  private async subscribeToExistingRepo(email: string, repository: Repository): Promise<E.Either<DomainError, void>> {
     const foundSubscription = await this.subscriptionRepository.getSubscriptionByEmailAndRepoId(email, repository.id);
 
     if (foundSubscription) {
@@ -132,13 +130,13 @@ export class SubscriptionService {
     email: string,
     subscription: Subscription,
     repo: string,
-  ): Promise<E.Either<ApiResponseException, void>> {
+  ): Promise<E.Either<DomainError, void>> {
     if (subscription.confirmed) {
       logger.info(`Subscription for ${subscription.repoId} from ${email} already exists`);
 
       subscriptionsTotal.inc({ status: 'already_exists' });
 
-      return E.left({ code: ApiResponseExceptionCode.ALREADY_EXISTS, message: 'Subscription already exists' });
+      return E.left({ code: DomainErrorCode.SUBSCRIPTION_ALREADY_EXISTS, message: 'Subscription already exists' });
     }
 
     logger.info(`Subscription for ${subscription.repoId} from ${email} already exists but not confirmed`);
@@ -158,13 +156,13 @@ export class SubscriptionService {
     email: string,
     token: string,
     repo: string,
-  ): Promise<E.Either<ApiResponseException, void>> {
+  ): Promise<E.Either<DomainError, void>> {
     const responseEither = await this.notificationService.sendConfirmationEmail(email, token, repo);
 
     if (E.isLeft(responseEither)) {
       subscriptionsTotal.inc({ status: 'failed_to_send_email' });
 
-      return E.left({ code: ApiResponseExceptionCode.GENERAL_FAILURE, message: responseEither.value.message });
+      return E.left({ code: DomainErrorCode.EMAIL_SEND_FAILURE, message: responseEither.value.message });
     }
 
     return E.right(undefined);

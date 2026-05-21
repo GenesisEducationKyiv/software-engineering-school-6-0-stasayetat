@@ -4,10 +4,11 @@ import {
   ISubscriptionRepository,
   SUBSCRIPTION_REPOSITORY,
 } from '@modules/subscription/repository/subscription.repository.interface';
+import { E } from '@shared/either';
 import { logger } from '@shared/logger';
 import { scannerRunDuration } from '@shared/metrics';
 import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
-import { E, Subscription } from '@shared/types';
+import { Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { getErrorMessage } from '@shared/utils';
 import { inject, injectable } from 'tsyringe';

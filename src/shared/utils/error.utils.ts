@@ -1,5 +1,6 @@
+import { E } from '@shared/either';
 import { logger } from '@shared/logger';
-import { ApiResponseException, ApiResponseExceptionCode, E } from '@shared/types';
+import { DomainError, DomainErrorCode } from '@shared/types';
 import { ErrorRequestHandler } from 'express';
 
 export class HttpException extends Error {
@@ -26,19 +27,21 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
 
 export const getErrorMessage = (error: unknown): string => (error instanceof Error ? error.message : 'Unknown');
 
-export const apiResponseToHttpExceptionCodesMap: Record<ApiResponseExceptionCode, number> = {
-  [ApiResponseExceptionCode.GENERAL_FAILURE]: 500,
-  [ApiResponseExceptionCode.NOT_FOUND]: 404,
-  [ApiResponseExceptionCode.RATE_LIMIT]: 429,
-  [ApiResponseExceptionCode.UNKNOWN]: 500,
-  [ApiResponseExceptionCode.ALREADY_EXISTS]: 409,
+export const domainErrorToHttpStatusMap: Record<DomainErrorCode, number> = {
+  [DomainErrorCode.SUBSCRIPTION_NOT_FOUND]: 404,
+  [DomainErrorCode.SUBSCRIPTION_ALREADY_EXISTS]: 409,
+  [DomainErrorCode.EMAIL_SEND_FAILURE]: 500,
+  [DomainErrorCode.REPO_HAS_NO_TAGS]: 404,
+  [DomainErrorCode.GITHUB_RATE_LIMIT]: 429,
+  [DomainErrorCode.GITHUB_REPO_NOT_FOUND]: 404,
+  [DomainErrorCode.GITHUB_API_ERROR]: 500,
 };
 
-export const unpackOrThrowException = <T>(either: E.Either<ApiResponseException, T>) => {
+export const unpackOrThrowException = <T>(either: E.Either<DomainError, T>) => {
   if (E.isLeft(either)) {
     const exception = either.value;
 
-    const status = apiResponseToHttpExceptionCodesMap[exception.code];
+    const status = domainErrorToHttpStatusMap[exception.code];
 
     throw new HttpException(status, exception.code);
   }

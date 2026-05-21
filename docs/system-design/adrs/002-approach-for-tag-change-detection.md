@@ -10,7 +10,7 @@ Project is in early stage, so delivery time are not yet critical concerns
 
 ---
 
-## Decision
+## Decisions
 
 ### 1. Polling using cron job
 - Pros: Simple to implement, easy to debug, popular approach

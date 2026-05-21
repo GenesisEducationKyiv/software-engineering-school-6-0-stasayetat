@@ -1,4 +1,5 @@
-import { E, FailureResult, SuccessResult } from '@shared/types';
+import { E } from '@shared/either';
+import { FailureResult, SuccessResult } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 
 export const NOTIFICATION_SERVICE = Symbol.for('NotificationService');
