@@ -6,9 +6,10 @@ import { RepoService } from '@modules/subscription/service/repo.service';
 import { SubscriptionService } from '@modules/subscription/service/subscription.service';
 import { TagFetcher, TAGS_FETCHER } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
+import { E } from '@shared/either';
 import { env } from '@shared/env';
 import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
-import { ApiResponseExceptionCode, E, TagsResponse } from '@shared/types';
+import { DomainErrorCode, TagsResponse } from '@shared/types';
 import request from 'supertest';
 import { container } from 'tsyringe';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -113,7 +114,7 @@ describe('Subscription API (integration)', () => {
 
     it('returns 404 when GitHub repo does not exist', async () => {
       mockTagFetcher.getTags.mockResolvedValue(
-        E.left({ code: ApiResponseExceptionCode.NOT_FOUND, message: 'Not Found' }),
+        E.left({ code: DomainErrorCode.GITHUB_REPO_NOT_FOUND, message: 'Not Found' }),
       );
 
       const res = await authed(request(server).post('/api/subscribe'))
