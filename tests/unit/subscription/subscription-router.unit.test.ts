@@ -2,8 +2,25 @@ import { subscriptionRouter } from '@modules/subscription';
 import { env } from '@shared/env';
 import express from 'express';
 import request from 'supertest';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('tsyringe', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('tsyringe')>();
+
+  const mockSubscriptionService = {
+    subscribe: vi.fn(),
+    confirmSubscribe: vi.fn(),
+    confirmUnsubscribe: vi.fn(),
+    getAllSubscriptionsByEmail: vi.fn()
+  };
+
+  return {
+    ...actual,
+    container: {
+      resolve: vi.fn().mockReturnValue(mockSubscriptionService),
+    },
+  };
+});
 const app = express();
 app.use(express.json());
 app.use('/api', subscriptionRouter);
@@ -11,9 +28,9 @@ app.use('/api', subscriptionRouter);
 const authed = (req: request.Test) => req.set('x-api-key', env.APP_API_KEY);
 
 describe('POST /api/subscribe', () => {
-  it('should return 400 for invalid email', async () => {
+  it('should return 400 for invalid notification', async () => {
     const res = await authed(request(app).post('/api/subscribe'))
-      .send({ email: 'not-an-email', repo: 'owner/repo' });
+      .send({ email: 'not-an-notification', repo: 'owner/repo' });
     expect(res.status).toBe(400);
   });
 
@@ -49,12 +66,12 @@ describe('GET /api/unsubscribe/:token', () => {
 });
 
 describe('GET /api/subscriptions', () => {
-  it('should return 400 for invalid email', async () => {
-    const res = await authed(request(app).get('/api/subscriptions?email=not-an-email'));
+  it('should return 400 for invalid notification', async () => {
+    const res = await authed(request(app).get('/api/subscriptions?email=not-an-notification'));
     expect(res.status).toBe(400);
   });
 
-  it('should return 400 for missing email', async () => {
+  it('should return 400 for missing notification', async () => {
     const res = await authed(request(app).get('/api/subscriptions'));
     expect(res.status).toBe(400);
   });

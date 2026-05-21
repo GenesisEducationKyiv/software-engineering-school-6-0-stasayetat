@@ -1,8 +1,12 @@
-import { subscriptionService } from '@modules/subscription/index';
+import { SubscriptionService } from '@modules/subscription/service/subscription.service';
 import { ConfirmDto, GetSubscriptionsDto, SubscribeDto, UnsubscribeDto } from '@shared/dtos';
 import { validateBody, validateParams, validateQuery } from '@shared/middlewares';
 import { apiKeyMiddleware } from '@shared/middlewares/api-key.middleware';
+import { unpackOrThrowException } from '@shared/utils';
 import { Request, Response, Router } from 'express';
+import { container } from 'tsyringe';
+
+const subscriptionService = container.resolve(SubscriptionService);
 
 export const subscriptionRouter = Router();
 
@@ -13,26 +17,32 @@ subscriptionRouter.post(
   async (req: Request, res: Response) => {
     const { email, repo } = req.body as SubscribeDto;
 
-    const { status, message } = await subscriptionService.subscribe(email, repo);
+    const subscribeResultEither = await subscriptionService.subscribe(email, repo);
 
-    return res.status(status).json({ message });
+    unpackOrThrowException(subscribeResultEither);
+
+    return res.status(201).json({ message: 'Email notification sent' });
   },
 );
 
 subscriptionRouter.get('/confirm/:token', validateParams(ConfirmDto), async (req: Request, res: Response) => {
   const { token } = req.params as { token: string };
 
-  const { status, message } = await subscriptionService.confirmSubscribe(token);
+  const confirmSubscriptionEither = await subscriptionService.confirmSubscribe(token);
 
-  return res.status(status).json({ message });
+  unpackOrThrowException(confirmSubscriptionEither);
+
+  return res.status(200).json({ message: 'Subscription confirmed successfully' });
 });
 
 subscriptionRouter.get('/unsubscribe/:token', validateParams(UnsubscribeDto), async (req: Request, res: Response) => {
   const { token } = req.params as { token: string };
 
-  const { status, message } = await subscriptionService.confirmUnsubscribe(token);
+  const confirmUnsubscriptionEither = await subscriptionService.confirmUnsubscribe(token);
 
-  return res.status(status).json({ message });
+  unpackOrThrowException(confirmUnsubscriptionEither);
+
+  return res.status(200).json({ message: 'Subscription removed successfully' });
 });
 
 subscriptionRouter.get(
@@ -42,8 +52,10 @@ subscriptionRouter.get(
   async (req: Request, res: Response) => {
     const { email } = req.query as { email: string };
 
-    const { status, data } = await subscriptionService.getAllSubscriptionsByEmail(email);
+    const allSubscriptionsEither = await subscriptionService.getAllSubscriptionsByEmail(email);
 
-    return res.status(status).json({ data });
+    const data = unpackOrThrowException(allSubscriptionsEither);
+
+    return res.status(200).json({ data });
   },
 );

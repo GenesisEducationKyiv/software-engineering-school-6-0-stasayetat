@@ -1,8 +1,12 @@
 import { db, repos, subscriptions } from '@shared/db';
 import { Subscription } from '@shared/types';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, lt, sql } from 'drizzle-orm';
+import { injectable } from 'tsyringe';
 
-export class SubscriptionRepository {
+import { ISubscriptionRepository } from './subscription.repository.interface';
+
+@injectable()
+export class SubscriptionRepository implements ISubscriptionRepository {
   async createNewSubscription(email: string, repoId: string) {
     const [newSubscription] = await db.insert(subscriptions).values({ email, repoId }).returning();
 
@@ -54,5 +58,11 @@ export class SubscriptionRepository {
 
   countByRepoId(repoId: string): Promise<number> {
     return db.$count(subscriptions, eq(subscriptions.repoId, repoId));
+  }
+
+  async deleteExpiredUnconfirmed(): Promise<void> {
+    await db
+      .delete(subscriptions)
+      .where(and(eq(subscriptions.confirmed, false), lt(subscriptions.createdAt, sql`now() - interval '1 hour'`)));
   }
 }

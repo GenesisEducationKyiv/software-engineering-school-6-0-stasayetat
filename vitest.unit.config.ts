@@ -6,6 +6,7 @@ const config = defineConfig({
     globals: true,
     environment: 'node',
     isolate: true,
+    setupFiles: ['tests/unit/setup.ts'],
     include: ['tests/**/*.unit.{spec,test}.ts'],
     env: {
       DOTENV_CONFIG_PATH: 'profiles/.env.test',
