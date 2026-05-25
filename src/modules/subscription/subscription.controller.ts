@@ -6,7 +6,7 @@ import { unpackOrThrowException } from '@shared/utils';
 import { Request, Response, Router } from 'express';
 import { container } from 'tsyringe';
 
-const subscriptionService = container.resolve(SubscriptionService);
+const getSubscriptionService = () => container.resolve(SubscriptionService);
 
 export const subscriptionRouter = Router();
 
@@ -17,7 +17,7 @@ subscriptionRouter.post(
   async (req: Request, res: Response) => {
     const { email, repo } = req.body as SubscribeDto;
 
-    const subscribeResultEither = await subscriptionService.subscribe(email, repo);
+    const subscribeResultEither = await getSubscriptionService().subscribe(email, repo);
 
     unpackOrThrowException(subscribeResultEither);
 
@@ -28,7 +28,7 @@ subscriptionRouter.post(
 subscriptionRouter.get('/confirm/:token', validateParams(ConfirmDto), async (req: Request, res: Response) => {
   const { token } = req.params as { token: string };
 
-  const confirmSubscriptionEither = await subscriptionService.confirmSubscribe(token);
+  const confirmSubscriptionEither = await getSubscriptionService().confirmSubscribe(token);
 
   unpackOrThrowException(confirmSubscriptionEither);
 
@@ -38,7 +38,7 @@ subscriptionRouter.get('/confirm/:token', validateParams(ConfirmDto), async (req
 subscriptionRouter.get('/unsubscribe/:token', validateParams(UnsubscribeDto), async (req: Request, res: Response) => {
   const { token } = req.params as { token: string };
 
-  const confirmUnsubscriptionEither = await subscriptionService.confirmUnsubscribe(token);
+  const confirmUnsubscriptionEither = await getSubscriptionService().confirmUnsubscribe(token);
 
   unpackOrThrowException(confirmUnsubscriptionEither);
 
@@ -52,7 +52,7 @@ subscriptionRouter.get(
   async (req: Request, res: Response) => {
     const { email } = req.query as { email: string };
 
-    const allSubscriptionsEither = await subscriptionService.getAllSubscriptionsByEmail(email);
+    const allSubscriptionsEither = await getSubscriptionService().getAllSubscriptionsByEmail(email);
 
     const data = unpackOrThrowException(allSubscriptionsEither);
 

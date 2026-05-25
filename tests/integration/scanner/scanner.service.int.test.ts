@@ -7,7 +7,7 @@ import { db, repos, subscriptions } from '@shared/db';
 import { E } from '@shared/either';
 import { DomainErrorCode, TagsResponse } from '@shared/types';
 import { eq } from 'drizzle-orm';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockNotifierService = {
   sendConfirmationEmail: vi.fn().mockResolvedValue(undefined),
@@ -29,6 +29,12 @@ const seedConfirmedSubscription = async (email: string, repoId: string) => {
 describe('ScannerService (integration)', () => {
   let service: ScannerService;
   let mockTagFetcher: TagFetcher;
+
+  afterAll(async () => {
+    await db.delete(subscriptions);
+    await db.delete(repos);
+    await db.$client.end();
+  });
 
   beforeEach(async () => {
     vi.clearAllMocks();

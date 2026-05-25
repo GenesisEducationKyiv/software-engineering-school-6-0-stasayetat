@@ -27,28 +27,19 @@ jobs:
       - name: TypeCheck
         run: pnpm run type-check
 
-  tests:
+  unit-tests:
     needs: lint
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    name: "Tests"
+    name: "Unit Tests"
 
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
 
-      - name: Set GitHub Secrets as environment variables
-        uses: oNaiPs/secrets-to-env-action@v1.5
-        with:
-          secrets: ${{ toJSON(secrets) }}
-
       - name: Run Unit Tests with Coverage
         id: unit-tests
         run: pnpm run vitest:unit --coverage.enabled true
-
-      - name: Run Integration Tests
-        id: integration-tests
-        run: pnpm run vitest:integration
 
       - name: Test Report
         if: always()
@@ -65,3 +56,32 @@ jobs:
         uses: davelosert/vitest-coverage-report-action@v2
         with:
           vite-config-path: ./vitest.unit.config.ts
+
+  integration-tests:
+    needs: lint
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    name: "Integration Tests"
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+
+      - name: Set GitHub Secrets as environment variables
+        uses: oNaiPs/secrets-to-env-action@v1.5
+        with:
+          secrets: ${{ toJSON(secrets) }}
+
+      - name: Run Integration Tests
+        id: integration-tests
+        run: pnpm run vitest:integration
+
+      - name: Test Report
+        if: always()
+        uses: ctrf-io/github-test-reporter@v1
+        with:
+          report-path: "./ctrf/*.json"
+          github-report: true
+          annotate: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
