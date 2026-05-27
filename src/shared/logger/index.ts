@@ -1,1 +1,1 @@
-export { logger } from './logger.setup';
+export * from './logger.setup';

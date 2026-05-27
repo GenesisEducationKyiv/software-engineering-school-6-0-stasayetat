@@ -19,4 +19,6 @@ export const EnvironmentSchema = zod.object({
   APP_API_KEY: zod.string(),
 
   LAUNCH_TEST_CONTAINERS: CoerceStringToBoolean,
+
+  ELASTICSEARCH_URL: zod.string(),
 });
