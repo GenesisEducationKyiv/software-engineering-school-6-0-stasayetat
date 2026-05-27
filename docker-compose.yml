@@ -51,6 +51,21 @@ services:
     depends_on:
       - app
 
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_FEATURE_TOGGLES_ENABLE=flameGraph traceqlSearch correlations metricsSummary traceqlEditor
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+
   app:
     build: .
     depends_on:
@@ -69,3 +84,4 @@ services:
 volumes:
   postgres_data:
   elasticsearch_data:
+  grafana_data:
