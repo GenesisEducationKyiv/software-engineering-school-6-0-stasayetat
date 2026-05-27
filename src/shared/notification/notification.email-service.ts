@@ -1,6 +1,6 @@
 import { E } from '@shared/either';
 import { logger } from '@shared/logger';
-import { emailSentTotal } from '@shared/metrics';
+import { emailSendDuration, emailSentTotal } from '@shared/metrics';
 import {
   confirmationEmailTemplate,
   EMAIL_SUBJECT_CONFIRMATION,
@@ -23,6 +23,8 @@ export class NotificationEmailService implements NotificationService {
     token: string,
     repo: string,
   ): Promise<E.Either<FailureResult, SuccessResult>> {
+    const end = emailSendDuration.startTimer({ type: 'confirmation' });
+
     try {
       await this.emailSender.send(to, EMAIL_SUBJECT_CONFIRMATION, confirmationEmailTemplate(token, repo));
 
@@ -39,10 +41,14 @@ export class NotificationEmailService implements NotificationService {
       logger.error(`Failed to send confirmation ${to}: ${message}`);
 
       return E.left({ success: false, message });
+    } finally {
+      end();
     }
   }
 
   async sendReleaseNotification(to: string, repo: Repository, tag: string, unsubscribeToken: string) {
+    const end = emailSendDuration.startTimer({ type: 'release' });
+
     try {
       await this.emailSender.send(
         to,
@@ -59,6 +65,8 @@ export class NotificationEmailService implements NotificationService {
       emailSentTotal.inc({ type: 'release', status: 'failed' });
 
       logger.error(`Failed to notify ${to}: ${message}`);
+    } finally {
+      end();
     }
   }
 }
