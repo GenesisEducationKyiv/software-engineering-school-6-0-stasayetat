@@ -1,5 +1,6 @@
-import { CoerceStringToBoolean } from '@shared/utils';
 import zod from 'zod';
+
+import { CoerceStringToBoolean } from '../utils/zod.utils';
 
 export const EnvironmentSchema = zod.object({
   PORT: zod.coerce.number(),
