@@ -21,7 +21,7 @@ internalRouter.get('/repos', async (_req: Request, res: Response) => {
 });
 
 internalRouter.get('/subscribers', validateQuery(GetSubscribersQueryDto), async (req: Request, res: Response) => {
-  const repoIds = ((req.query['repoIds'] as string) ?? '').split(',').filter(Boolean);
+  const repoIds = (req.query['repoIds'] as string).split(',');
 
   const subscriptionRepository = container.resolve<ISubscriptionRepository>(SUBSCRIPTION_REPOSITORY);
   const subscribers = await subscriptionRepository.getSubscriptionsByRepoIds(repoIds);
@@ -34,7 +34,7 @@ internalRouter.patch(
   validateParams(UpdateTagParamDto),
   validateBody(UpdateTagBodyDto),
   async (req: Request, res: Response) => {
-    const { id } = req.params as unknown as UpdateTagParamDto;
+    const { id } = req.params as { id: string };
     const { tag } = req.body as UpdateTagBodyDto;
 
     const repoRepository = container.resolve<IRepoRepository>(REPO_REPOSITORY);

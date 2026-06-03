@@ -1,3 +1,4 @@
+import { server } from '@notifier/server';
 import { RepoRepository } from '@notifier/subscription/repository/repo.repository';
 import { REPO_REPOSITORY } from '@notifier/subscription/repository/repo.repository.interface';
 import { SubscriptionRepository } from '@notifier/subscription/repository/subscription.repository';
@@ -13,8 +14,6 @@ import { DomainErrorCode, TagsResponse } from '@shared/types';
 import request from 'supertest';
 import { container } from 'tsyringe';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { server } from '../../../src/apps/notifier/server';
 
 const mockTagFetcher = { getTags: vi.fn() } satisfies TagFetcher;
 const mockNotificationService = {
@@ -51,25 +50,25 @@ describe('Subscription API (integration)', () => {
   describe('POST /notifier/subscribe', () => {
     it('should return 401 without API key', async () => {
       const res = await request(server)
-        .post('/api/subscribe')
+        .post('/notifier/subscribe')
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       expect(res.status).toBe(401);
     });
 
     it('should return 400 for invalid email', async () => {
-      const res = await authed(request(server).post('/api/subscribe'))
+      const res = await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'not-an-email', repo: 'owner/repo' });
       expect(res.status).toBe(400);
     });
 
     it('should return 400 for invalid repo format', async () => {
-      const res = await authed(request(server).post('/api/subscribe'))
+      const res = await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'invalid-repo' });
       expect(res.status).toBe(400);
     });
 
     it('should return 201 and creates subscription in DB', async () => {
-      const res = await authed(request(server).post('/api/subscribe'))
+      const res = await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
 
       expect(res.status).toBe(201);
@@ -86,24 +85,24 @@ describe('Subscription API (integration)', () => {
     });
 
     it('should return 409 when subscription is already confirmed', async () => {
-      await authed(request(server).post('/api/subscribe'))
+      await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
 
       const [sub] = await db.select().from(subscriptions);
-      await request(server).get(`/api/confirm/${sub.token}`);
+      await request(server).get(`/notifier/confirm/${sub.token}`);
 
-      const res = await authed(request(server).post('/api/subscribe'))
+      const res = await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       expect(res.status).toBe(409);
     });
 
     it('should return 201 and resends email when subscription exists but not confirmed', async () => {
-      await authed(request(server).post('/api/subscribe'))
+      await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
 
       mockNotificationService.sendConfirmationEmail.mockClear();
 
-      const res = await authed(request(server).post('/api/subscribe'))
+      const res = await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       expect(res.status).toBe(201);
       expect(mockNotificationService.sendConfirmationEmail).toHaveBeenCalledTimes(1);
@@ -117,7 +116,7 @@ describe('Subscription API (integration)', () => {
         E.left({ code: DomainErrorCode.GITHUB_REPO_NOT_FOUND, message: 'Not Found' }),
       );
 
-      const res = await authed(request(server).post('/api/subscribe'))
+      const res = await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'nonexistent/repo' });
       expect(res.status).toBe(404);
     });
@@ -125,21 +124,21 @@ describe('Subscription API (integration)', () => {
 
   describe('GET /notifier/confirm/:token', () => {
     it('should return 400 for non-UUID token', async () => {
-      const res = await request(server).get('/api/confirm/not-a-uuid');
+      const res = await request(server).get('/notifier/confirm/not-a-uuid');
       expect(res.status).toBe(400);
     });
 
     it('should return 404 for unknown token', async () => {
-      const res = await request(server).get('/api/confirm/00000000-0000-0000-0000-000000000000');
+      const res = await request(server).get('/notifier/confirm/00000000-0000-0000-0000-000000000000');
       expect(res.status).toBe(404);
     });
 
     it('should return 200 and sets subscription as confirmed', async () => {
-      await authed(request(server).post('/api/subscribe'))
+      await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       const [sub] = await db.select().from(subscriptions);
 
-      const res = await request(server).get(`/api/confirm/${sub.token}`);
+      const res = await request(server).get(`/notifier/confirm/${sub.token}`);
       expect(res.status).toBe(200);
 
       const [updated] = await db.select().from(subscriptions);
@@ -149,22 +148,22 @@ describe('Subscription API (integration)', () => {
 
   describe('GET /notifier/unsubscribe/:token', () => {
     it('should return 400 for non-UUID token', async () => {
-      const res = await request(server).get('/api/unsubscribe/not-a-uuid');
+      const res = await request(server).get('/notifier/unsubscribe/not-a-uuid');
       expect(res.status).toBe(400);
     });
 
     it('should return 404 for unknown token', async () => {
-      const res = await request(server).get('/api/unsubscribe/00000000-0000-0000-0000-000000000000');
+      const res = await request(server).get('/notifier/unsubscribe/00000000-0000-0000-0000-000000000000');
       expect(res.status).toBe(404);
     });
 
     it('should return 200 and removes confirmed subscription', async () => {
-      await authed(request(server).post('/api/subscribe'))
+      await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       const [sub] = await db.select().from(subscriptions);
-      await request(server).get(`/api/confirm/${sub.token}`);
+      await request(server).get(`/notifier/confirm/${sub.token}`);
 
-      const res = await request(server).get(`/api/unsubscribe/${sub.token}`);
+      const res = await request(server).get(`/notifier/unsubscribe/${sub.token}`);
       expect(res.status).toBe(200);
 
       const subsInDb = await db.select().from(subscriptions);
@@ -172,11 +171,11 @@ describe('Subscription API (integration)', () => {
     });
 
     it('should remove repo when last subscriber unsubscribes', async () => {
-      await authed(request(server).post('/api/subscribe'))
+      await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       const [sub] = await db.select().from(subscriptions);
-      await request(server).get(`/api/confirm/${sub.token}`);
-      await request(server).get(`/api/unsubscribe/${sub.token}`);
+      await request(server).get(`/notifier/confirm/${sub.token}`);
+      await request(server).get(`/notifier/unsubscribe/${sub.token}`);
 
       const reposInDb = await db.select().from(repos);
       expect(reposInDb).toHaveLength(0);
@@ -185,36 +184,36 @@ describe('Subscription API (integration)', () => {
 
   describe('GET /notifier/subscriptions', () => {
     it('should return 401 without API key', async () => {
-      const res = await request(server).get('/api/subscriptions?email=test@gmail.com');
+      const res = await request(server).get('/notifier/subscriptions?email=test@gmail.com');
       expect(res.status).toBe(401);
     });
 
     it('should return 400 for invalid email', async () => {
-      const res = await authed(request(server).get('/api/subscriptions?email=not-an-email'));
+      const res = await authed(request(server).get('/notifier/subscriptions?email=not-an-email'));
       expect(res.status).toBe(400);
     });
 
     it('should return 400 for missing email', async () => {
-      const res = await authed(request(server).get('/api/subscriptions'));
+      const res = await authed(request(server).get('/notifier/subscriptions'));
       expect(res.status).toBe(400);
     });
 
     it('should return 200 with empty array when no confirmed subscriptions', async () => {
-      const res = await authed(request(server).get('/api/subscriptions?email=nobody@gmail.com'));
+      const res = await authed(request(server).get('/notifier/subscriptions?email=nobody@gmail.com'));
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual([]);
     });
 
     it('should return 200 with confirmed subscriptions only', async () => {
-      await authed(request(server).post('/api/subscribe'))
+      await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       const [sub] = await db.select().from(subscriptions);
-      await request(server).get(`/api/confirm/${sub.token}`);
+      await request(server).get(`/notifier/confirm/${sub.token}`);
 
-      await authed(request(server).post('/api/subscribe'))
+      await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo2' });
 
-      const res = await authed(request(server).get('/api/subscriptions?email=test@gmail.com'));
+      const res = await authed(request(server).get('/notifier/subscriptions?email=test@gmail.com'));
 
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(1);
