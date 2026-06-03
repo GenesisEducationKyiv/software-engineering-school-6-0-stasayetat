@@ -1,11 +1,10 @@
-import { RepoTagFetcher } from '@modules/scanner/service/repo-tag.fetcher';
-import { ScannerService } from '@modules/scanner/service/scanner.service';
-import { RepoRepository } from '@modules/subscription/repository/repo.repository';
-import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
+import { RepoTagFetcher } from '@scanner/service/repo-tag.fetcher';
+import { ScannerDataService } from '@scanner/service/scanner.data-service';
+import { ScannerService } from '@scanner/service/scanner.service';
 import { E } from '@shared/either';
 import { NotificationEmailService } from '@shared/notification/notification.email-service';
 import { DomainErrorCode } from '@shared/types';
-import { beforeEach, describe, expect, it, MockedObject, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockRepo = {
   id: 'repo-uuid',
@@ -25,41 +24,44 @@ const mockSubscription = {
 
 describe('ScannerService', () => {
   let service: ScannerService;
-  let repoRepository: MockedObject<RepoRepository>;
-  let repoTagFetcher: MockedObject<RepoTagFetcher>;
-  let subscriptionRepository: MockedObject<SubscriptionRepository>;
-  let notifierService: MockedObject<NotificationEmailService>;
+  let dataAdapter: ScannerDataService;
+  let repoTagFetcher: RepoTagFetcher;
+  let notifierService: NotificationEmailService;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
-    repoRepository = new RepoRepository() as MockedObject<RepoRepository>;
-    repoTagFetcher = new RepoTagFetcher({} as any) as MockedObject<RepoTagFetcher>;
-    subscriptionRepository = new SubscriptionRepository() as MockedObject<SubscriptionRepository>;
-    notifierService = new NotificationEmailService({} as any) as MockedObject<NotificationEmailService>;
+    dataAdapter = {
+      getAllRepos: vi.fn().mockResolvedValue([]),
+      getSubscribersByRepoIds: vi.fn().mockResolvedValue([]),
+      updateLastSeenTag: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ScannerDataService;
 
-    vi.spyOn(repoRepository, 'getAllRepos').mockResolvedValue([]);
-    vi.spyOn(repoRepository, 'updateLastSeenTag').mockResolvedValue(undefined);
+    repoTagFetcher = new RepoTagFetcher({} as any);
+    notifierService = {
+      sendConfirmationEmail: vi.fn(),
+      sendReleaseNotification: vi.fn(),
+    } as unknown as NotificationEmailService;
+
     vi.spyOn(repoTagFetcher, 'getTags').mockResolvedValue(E.right({ currentRepo: mockRepo, latestTag: 'v1.0.0' }));
-    vi.spyOn(subscriptionRepository, 'getSubscriptionsByRepoIds').mockResolvedValue([]);
     vi.spyOn(notifierService, 'sendReleaseNotification').mockResolvedValue(undefined);
 
-    service = new ScannerService(repoRepository, repoTagFetcher, subscriptionRepository, notifierService);
+    service = new ScannerService(dataAdapter, repoTagFetcher, notifierService);
   });
 
   describe('run', () => {
     it('should return early if there are no repos', async () => {
-      repoRepository.getAllRepos.mockResolvedValue([]);
+      vi.mocked(dataAdapter.getAllRepos).mockResolvedValue([]);
 
       await service.run();
 
-      expect(subscriptionRepository.getSubscriptionsByRepoIds).not.toHaveBeenCalled();
+      expect(dataAdapter.getSubscribersByRepoIds).not.toHaveBeenCalled();
     });
 
     it('should return early if there are no subscriptions', async () => {
-      repoRepository.getAllRepos.mockResolvedValue([mockRepo]);
-      repoTagFetcher.getTags.mockResolvedValue(E.right({ currentRepo: mockRepo, latestTag: 'v2.0.0' }));
-      subscriptionRepository.getSubscriptionsByRepoIds.mockResolvedValue([]);
+      vi.mocked(dataAdapter.getAllRepos).mockResolvedValue([mockRepo]);
+      vi.spyOn(repoTagFetcher, 'getTags').mockResolvedValue(E.right({ currentRepo: mockRepo, latestTag: 'v2.0.0' }));
+      vi.mocked(dataAdapter.getSubscribersByRepoIds).mockResolvedValue([]);
 
       await service.run();
 
@@ -67,19 +69,19 @@ describe('ScannerService', () => {
     });
 
     it('should not notify if tag has not changed', async () => {
-      repoRepository.getAllRepos.mockResolvedValue([mockRepo]);
-      repoTagFetcher.getTags.mockResolvedValue(E.right({ currentRepo: mockRepo, latestTag: 'v1.0.0' }));
+      vi.mocked(dataAdapter.getAllRepos).mockResolvedValue([mockRepo]);
+      vi.spyOn(repoTagFetcher, 'getTags').mockResolvedValue(E.right({ currentRepo: mockRepo, latestTag: 'v1.0.0' }));
 
       await service.run();
 
-      expect(subscriptionRepository.getSubscriptionsByRepoIds).not.toHaveBeenCalled();
+      expect(dataAdapter.getSubscribersByRepoIds).not.toHaveBeenCalled();
       expect(notifierService.sendReleaseNotification).not.toHaveBeenCalled();
     });
 
     it('should notify subscribers and update tag when new release found', async () => {
-      repoRepository.getAllRepos.mockResolvedValue([mockRepo]);
-      repoTagFetcher.getTags.mockResolvedValue(E.right({ currentRepo: mockRepo, latestTag: 'v2.0.0' }));
-      subscriptionRepository.getSubscriptionsByRepoIds.mockResolvedValue([mockSubscription]);
+      vi.mocked(dataAdapter.getAllRepos).mockResolvedValue([mockRepo]);
+      vi.spyOn(repoTagFetcher, 'getTags').mockResolvedValue(E.right({ currentRepo: mockRepo, latestTag: 'v2.0.0' }));
+      vi.mocked(dataAdapter.getSubscribersByRepoIds).mockResolvedValue([mockSubscription]);
 
       await service.run();
 
@@ -89,31 +91,30 @@ describe('ScannerService', () => {
         'v2.0.0',
         'token-uuid',
       );
-      expect(repoRepository.updateLastSeenTag).toHaveBeenCalledWith('repo-uuid', 'v2.0.0');
+      expect(dataAdapter.updateLastSeenTag).toHaveBeenCalledWith('repo-uuid', 'v2.0.0');
     });
 
     it('should continue notifying other repos if fetching tags fails for one', async () => {
       const mockRepo2 = { ...mockRepo, id: 'repo-uuid-2', repo: 'owner/repo2' };
 
-      repoRepository.getAllRepos.mockResolvedValue([mockRepo, mockRepo2]);
-      repoTagFetcher.getTags
+      vi.mocked(dataAdapter.getAllRepos).mockResolvedValue([mockRepo, mockRepo2]);
+      vi.spyOn(repoTagFetcher, 'getTags')
         .mockResolvedValueOnce(E.left({ currentRepo: mockRepo, error: { code: DomainErrorCode.GITHUB_API_ERROR, message: 'Error' } }))
         .mockResolvedValueOnce(E.right({ currentRepo: mockRepo2, latestTag: 'v2.0.0' }));
-
-      subscriptionRepository.getSubscriptionsByRepoIds.mockResolvedValue([
+      vi.mocked(dataAdapter.getSubscribersByRepoIds).mockResolvedValue([
         { ...mockSubscription, repoId: 'repo-uuid-2' },
       ]);
 
       await service.run();
 
       expect(notifierService.sendReleaseNotification).toHaveBeenCalledTimes(1);
-      expect(repoRepository.updateLastSeenTag).toHaveBeenCalledWith('repo-uuid-2', 'v2.0.0');
+      expect(dataAdapter.updateLastSeenTag).toHaveBeenCalledWith('repo-uuid-2', 'v2.0.0');
     });
 
     it('should notify multiple subscribers for the same repo', async () => {
-      repoRepository.getAllRepos.mockResolvedValue([mockRepo]);
-      repoTagFetcher.getTags.mockResolvedValue(E.right({ currentRepo: mockRepo, latestTag: 'v2.0.0' }));
-      subscriptionRepository.getSubscriptionsByRepoIds.mockResolvedValue([
+      vi.mocked(dataAdapter.getAllRepos).mockResolvedValue([mockRepo]);
+      vi.spyOn(repoTagFetcher, 'getTags').mockResolvedValue(E.right({ currentRepo: mockRepo, latestTag: 'v2.0.0' }));
+      vi.mocked(dataAdapter.getSubscribersByRepoIds).mockResolvedValue([
         mockSubscription,
         { ...mockSubscription, id: 'sub-uuid-2', email: 'test2@gmail.com', token: 'token-uuid-2' },
       ]);

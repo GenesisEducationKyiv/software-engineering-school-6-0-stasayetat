@@ -22,4 +22,6 @@ export const EnvironmentSchema = zod.object({
   LAUNCH_TEST_CONTAINERS: CoerceStringToBoolean,
 
   ELASTICSEARCH_URL: zod.string(),
+
+  SCANNER_API_URL: zod.string().optional(),
 });

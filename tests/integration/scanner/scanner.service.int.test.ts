@@ -1,7 +1,8 @@
-import { ScannerService } from '@modules/scanner';
-import { RepoTagFetcher } from '@modules/scanner/service/repo-tag.fetcher';
-import { RepoRepository } from '@modules/subscription/repository/repo.repository';
-import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
+import { RepoRepository } from '@notifier/subscription/repository/repo.repository';
+import { SubscriptionRepository } from '@notifier/subscription/repository/subscription.repository';
+import { ScannerService } from '@scanner';
+import { RepoTagFetcher } from '@scanner/service/repo-tag.fetcher';
+import { ScannerDataService } from '@scanner/service/scanner.data-service';
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
 import { E } from '@shared/either';
@@ -46,10 +47,16 @@ describe('ScannerService (integration)', () => {
       getTags: vi.fn(),
     };
 
+    const repoRepository = new RepoRepository();
+    const subscriptionRepository = new SubscriptionRepository();
+
     service = new ScannerService(
-      new RepoRepository(),
+      {
+        getAllRepos: () => repoRepository.getAllRepos(),
+        getSubscribersByRepoIds: (ids: string[]) => subscriptionRepository.getSubscriptionsByRepoIds(ids),
+        updateLastSeenTag: (id: string, tag: string) => repoRepository.updateLastSeenTag(id, tag),
+      } as unknown as ScannerDataService,
       new RepoTagFetcher(mockTagFetcher),
-      new SubscriptionRepository(),
       mockNotifierService as any,
     );
   });
@@ -112,7 +119,7 @@ describe('ScannerService (integration)', () => {
       expect(mockNotifierService.sendReleaseNotification).toHaveBeenCalledTimes(2);
     });
 
-    it('should skip repo if github api fails and continue with others', async () => {
+    it('should skip repo if github notifier fails and continue with others', async () => {
       const repo1 = await seedRepo('facebook/react', 'v1.0.0');
       const repo2 = await seedRepo('microsoft/typescript', 'v4.0.0');
       await seedConfirmedSubscription('test@gmail.com', repo1.id);

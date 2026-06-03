@@ -1,4 +1,3 @@
-import { IRepoRepository, REPO_REPOSITORY } from '@modules/subscription/repository/repo.repository.interface';
 import { TagFetcher, TAGS_FETCHER } from '@shared/apis/tags-fetcher.interface';
 import { E } from '@shared/either';
 import { logger } from '@shared/logger';
@@ -6,6 +5,8 @@ import { totalReposCount } from '@shared/metrics';
 import { DomainError, DomainErrorCode } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { inject, injectable } from 'tsyringe';
+
+import { IRepoRepository, REPO_REPOSITORY } from '../repository/repo.repository.interface';
 
 @injectable()
 export class RepoService {

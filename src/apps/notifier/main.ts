@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import './container';
-import './modules/scanner/scanner.cron-controller';
-import './modules/subscription/subscription.cron-controller';
+import '@notifier/subscription/subscription.cron-controller';
 
 import { db, repos, subscriptions } from '@shared/db';
 import { env } from '@shared/env';
@@ -30,7 +29,7 @@ async function bootstrap() {
     if (err) {
       logger.error(err.message);
     } else {
-      logger.info('Express server started on port: ' + env.PORT);
+      logger.info('Notifier server started on port: ' + env.PORT);
     }
   });
 

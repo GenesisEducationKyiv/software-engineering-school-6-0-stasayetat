@@ -1,8 +1,3 @@
-import {
-  ISubscriptionRepository,
-  SUBSCRIPTION_REPOSITORY,
-} from '@modules/subscription/repository/subscription.repository.interface';
-import { RepoService } from '@modules/subscription/service/repo.service';
 import { E } from '@shared/either';
 import { logger } from '@shared/logger';
 import { activeSubscriptionCount, subscriptionOperationDuration, subscriptionsTotal } from '@shared/metrics';
@@ -10,6 +5,9 @@ import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/
 import { DomainError, DomainErrorCode, MinifiedSubscription, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { inject, injectable } from 'tsyringe';
+
+import { ISubscriptionRepository, SUBSCRIPTION_REPOSITORY } from '../repository/subscription.repository.interface';
+import { RepoService } from './repo.service';
 
 @injectable()
 export class SubscriptionService {

@@ -1,7 +1,7 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
-import { SubscriptionService } from '@modules/subscription';
-import { ConfirmDto, GetSubscriptionsDto, SubscribeDto, UnsubscribeDto } from '@shared/dtos';
+import { ConfirmDto, GetSubscriptionsDto, SubscribeDto, UnsubscribeDto } from '@notifier/dtos';
+import { SubscriptionService } from '@notifier/subscription';
 import { E } from '@shared/either';
 import { logger } from '@shared/logger';
 import { DomainError, MinifiedSubscription } from '@shared/types';

@@ -1,9 +1,3 @@
-import { RepoTagFetcher } from '@modules/scanner/service/repo-tag.fetcher';
-import { IRepoRepository, REPO_REPOSITORY } from '@modules/subscription/repository/repo.repository.interface';
-import {
-  ISubscriptionRepository,
-  SUBSCRIPTION_REPOSITORY,
-} from '@modules/subscription/repository/subscription.repository.interface';
 import { E } from '@shared/either';
 import { logger } from '@shared/logger';
 import { scannerRunDuration, scannerRunsTotal } from '@shared/metrics';
@@ -15,13 +9,14 @@ import { inject, injectable } from 'tsyringe';
 
 import { RepoNotifyInfo, RepoScanError, RepoScanSuccess } from '../scanner.types';
 import { hasNewRelease } from '../scanner.utils';
+import { RepoTagFetcher } from './repo-tag.fetcher';
+import { ScannerDataService } from './scanner.data-service';
 
 @injectable()
 export class ScannerService {
   constructor(
-    @inject(REPO_REPOSITORY) private readonly repoRepository: IRepoRepository,
+    private readonly dataService: ScannerDataService,
     private readonly repoTagFetcher: RepoTagFetcher,
-    @inject(SUBSCRIPTION_REPOSITORY) private readonly subscriptionRepository: ISubscriptionRepository,
     @inject(NOTIFICATION_SERVICE) private readonly notifierService: NotificationService,
   ) {}
 
@@ -30,7 +25,7 @@ export class ScannerService {
 
     try {
       logger.info('Start scanning...');
-      const allRepos = await this.repoRepository.getAllRepos();
+      const allRepos = await this.dataService.getAllRepos();
 
       if (!allRepos.length) {
         logger.info(`There is no repos. Finishing job...`);
@@ -54,7 +49,7 @@ export class ScannerService {
 
       const repoIds = repoToNotify.map(repo => repo.currentRepo.id);
 
-      const subscriptions = await this.subscriptionRepository.getSubscriptionsByRepoIds(repoIds);
+      const subscriptions = await this.dataService.getSubscribersByRepoIds(repoIds);
 
       if (!subscriptions.length) {
         logger.info(`There is no subscriptions. Finishing job...`);
@@ -87,16 +82,16 @@ export class ScannerService {
       ),
     );
 
-    await this.repoRepository.updateLastSeenTag(repo.id, newTag);
+    await this.dataService.updateLastSeenTag(repo.id, newTag);
   }
 
   private buildNotifyInfos(repoToNotify: RepoScanSuccess[], subscriptions: Subscription[]): RepoNotifyInfo[] {
     const subscriptionsByRepoId = new Map<string, Subscription[]>();
 
     for (const subscription of subscriptions) {
-      const existingSubscription = subscriptionsByRepoId.get(subscription.repoId) ?? [];
-      existingSubscription.push(subscription);
-      subscriptionsByRepoId.set(subscription.repoId, existingSubscription);
+      const existing = subscriptionsByRepoId.get(subscription.repoId) ?? [];
+      existing.push(subscription);
+      subscriptionsByRepoId.set(subscription.repoId, existing);
     }
 
     return repoToNotify.map(({ currentRepo, latestTag }) => ({
@@ -107,11 +102,7 @@ export class ScannerService {
   }
 
   private async scanAllRepos(allRepos: Repository[]) {
-    const resultEithers = await Promise.all(
-      allRepos.map(repo => {
-        return this.repoTagFetcher.getTags(repo);
-      }),
-    );
+    const resultEithers = await Promise.all(allRepos.map(repo => this.repoTagFetcher.getTags(repo)));
 
     const { successful, failed } = resultEithers.reduce<{
       successful: RepoScanSuccess[];

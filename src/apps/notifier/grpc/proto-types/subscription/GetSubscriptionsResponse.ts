@@ -1,4 +1,5 @@
 // Original file: src/grpc/subscription.proto
+
 import type {
   Subscription as _subscription_Subscription,
   Subscription__Output as _subscription_Subscription__Output,

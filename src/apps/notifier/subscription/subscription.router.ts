@@ -1,10 +1,11 @@
-import { SubscriptionService } from '@modules/subscription/service/subscription.service';
-import { ConfirmDto, GetSubscriptionsDto, SubscribeDto, UnsubscribeDto } from '@shared/dtos';
-import { validateBody, validateParams, validateQuery } from '@shared/middlewares';
-import { apiKeyMiddleware } from '@shared/middlewares/api-key.middleware';
+import { ConfirmDto, GetSubscriptionsDto, SubscribeDto, UnsubscribeDto } from '@notifier/dtos';
+import { validateBody, validateParams, validateQuery } from '@notifier/middlewares';
+import { apiKeyMiddleware } from '@notifier/middlewares/api-key.middleware';
 import { unpackOrThrowException } from '@shared/utils';
 import { Request, Response, Router } from 'express';
 import { container } from 'tsyringe';
+
+import { SubscriptionService } from './service/subscription.service';
 
 const getSubscriptionService = () => container.resolve(SubscriptionService);
 

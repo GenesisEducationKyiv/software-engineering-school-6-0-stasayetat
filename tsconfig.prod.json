@@ -8,7 +8,9 @@
     "types": [],
     "paths": {
       "@shared/*": ["./src/shared/*"],
-      "@modules/*": ["./src/modules/*"]
+      "@notifier/*": ["./src/apps/notifier/*"],
+      "@scanner/*": ["./src/apps/scanner/*"],
+      "@scanner": ["./src/apps/scanner/index"]
     }
   },
   "exclude": [

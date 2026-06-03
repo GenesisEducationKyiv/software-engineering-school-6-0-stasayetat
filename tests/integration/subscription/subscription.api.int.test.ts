@@ -1,9 +1,9 @@
-import { RepoRepository } from '@modules/subscription/repository/repo.repository';
-import { REPO_REPOSITORY } from '@modules/subscription/repository/repo.repository.interface';
-import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
-import { SUBSCRIPTION_REPOSITORY } from '@modules/subscription/repository/subscription.repository.interface';
-import { RepoService } from '@modules/subscription/service/repo.service';
-import { SubscriptionService } from '@modules/subscription/service/subscription.service';
+import { RepoRepository } from '@notifier/subscription/repository/repo.repository';
+import { REPO_REPOSITORY } from '@notifier/subscription/repository/repo.repository.interface';
+import { SubscriptionRepository } from '@notifier/subscription/repository/subscription.repository';
+import { SUBSCRIPTION_REPOSITORY } from '@notifier/subscription/repository/subscription.repository.interface';
+import { RepoService } from '@notifier/subscription/service/repo.service';
+import { SubscriptionService } from '@notifier/subscription/service/subscription.service';
 import { TagFetcher, TAGS_FETCHER } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
 import { E } from '@shared/either';
@@ -14,7 +14,7 @@ import request from 'supertest';
 import { container } from 'tsyringe';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { server } from '../../../src/server';
+import { server } from '../../../src/apps/notifier/server';
 
 const mockTagFetcher = { getTags: vi.fn() } satisfies TagFetcher;
 const mockNotificationService = {
@@ -48,7 +48,7 @@ describe('Subscription API (integration)', () => {
     container.reset();
   });
 
-  describe('POST /api/subscribe', () => {
+  describe('POST /notifier/subscribe', () => {
     it('should return 401 without API key', async () => {
       const res = await request(server)
         .post('/api/subscribe')
@@ -123,7 +123,7 @@ describe('Subscription API (integration)', () => {
     });
   });
 
-  describe('GET /api/confirm/:token', () => {
+  describe('GET /notifier/confirm/:token', () => {
     it('should return 400 for non-UUID token', async () => {
       const res = await request(server).get('/api/confirm/not-a-uuid');
       expect(res.status).toBe(400);
@@ -147,7 +147,7 @@ describe('Subscription API (integration)', () => {
     });
   });
 
-  describe('GET /api/unsubscribe/:token', () => {
+  describe('GET /notifier/unsubscribe/:token', () => {
     it('should return 400 for non-UUID token', async () => {
       const res = await request(server).get('/api/unsubscribe/not-a-uuid');
       expect(res.status).toBe(400);
@@ -183,7 +183,7 @@ describe('Subscription API (integration)', () => {
     });
   });
 
-  describe('GET /api/subscriptions', () => {
+  describe('GET /notifier/subscriptions', () => {
     it('should return 401 without API key', async () => {
       const res = await request(server).get('/api/subscriptions?email=test@gmail.com');
       expect(res.status).toBe(401);
