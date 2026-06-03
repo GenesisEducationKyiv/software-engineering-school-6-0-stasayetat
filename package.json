@@ -2,7 +2,9 @@
   "name": "sy-github-notifier",
   "version": "1.0.0",
   "scripts": {
-    "dev": "nodemon --watch \"src/**\" --ext \"ts,json\" --ignore \"src/**/*.spec.ts\" --exec \"ts-node src/apps/notifier/main.ts\"",
+    "dev:app": "nodemon --watch \"src/**\" --ext \"ts,json\" --ignore \"src/**/*.spec.ts\" --exec \"ts-node\"",
+    "dev:notifier": "npm run dev:app -- src/apps/notifier/main.ts",
+    "dev:scanner": "npm run dev:app -- src/apps/scanner/main.ts",
     "build": "tsc --project tsconfig.prod.json && tsc-alias -p tsconfig.prod.json",
     "start:notifier": "node .build/apps/notifier/main.js",
     "start:scanner": "node .build/apps/scanner/main.js",
