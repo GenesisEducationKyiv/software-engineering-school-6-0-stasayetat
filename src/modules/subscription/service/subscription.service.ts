@@ -5,7 +5,7 @@ import {
 import { RepoService } from '@modules/subscription/service/repo.service';
 import { E } from '@shared/either';
 import { logger } from '@shared/logger';
-import { activeSubscriptionCount, subscriptionsTotal } from '@shared/metrics';
+import { activeSubscriptionCount, subscriptionOperationDuration, subscriptionsTotal } from '@shared/metrics';
 import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
 import { DomainError, DomainErrorCode, MinifiedSubscription, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
@@ -20,58 +20,76 @@ export class SubscriptionService {
   ) {}
 
   async subscribe(email: string, repo: string): Promise<E.Either<DomainError, void>> {
-    const foundRepo = await this.repoService.findOrCreateRepo(repo);
+    const end = subscriptionOperationDuration.startTimer({ type: 'subscribe' });
 
-    if (E.isLeft(foundRepo)) {
-      return foundRepo;
+    try {
+      const foundRepo = await this.repoService.findOrCreateRepo(repo);
+
+      if (E.isLeft(foundRepo)) {
+        return foundRepo;
+      }
+
+      return await this.subscribeToExistingRepo(email, foundRepo.value);
+    } finally {
+      end();
     }
-
-    return await this.subscribeToExistingRepo(email, foundRepo.value);
   }
 
   async confirmSubscribe(token: string): Promise<E.Either<DomainError, void>> {
-    const foundSubscriptionEither = await this.findSubscriptionByTokenOrFail(token);
+    const end = subscriptionOperationDuration.startTimer({ type: 'confirmSubscribe' });
 
-    if (E.isLeft(foundSubscriptionEither)) {
-      subscriptionsTotal.inc({ status: 'token_not_found' });
+    try {
+      const foundSubscriptionEither = await this.findSubscriptionByTokenOrFail(token);
 
-      return foundSubscriptionEither;
+      if (E.isLeft(foundSubscriptionEither)) {
+        subscriptionsTotal.inc({ status: 'token_not_found' });
+
+        return foundSubscriptionEither;
+      }
+
+      await this.subscriptionRepository.confirmSubscription(foundSubscriptionEither.value);
+
+      activeSubscriptionCount.inc();
+
+      logger.info(`Subscription confirmed successfully`);
+
+      return E.right(undefined);
+    } finally {
+      end();
     }
-
-    await this.subscriptionRepository.confirmSubscription(foundSubscriptionEither.value);
-
-    activeSubscriptionCount.inc();
-
-    logger.info(`Subscription confirmed successfully`);
-
-    return E.right(undefined);
   }
 
   async confirmUnsubscribe(token: string): Promise<E.Either<DomainError, void>> {
-    const foundSubscriptionEither = await this.findSubscriptionByTokenOrFail(token, true);
+    const end = subscriptionOperationDuration.startTimer({ type: 'confirmUnsubscribe' });
 
-    if (E.isLeft(foundSubscriptionEither)) {
-      subscriptionsTotal.inc({ status: 'token_not_found' });
+    try {
+      const foundSubscriptionEither = await this.findSubscriptionByTokenOrFail(token, true);
 
-      return foundSubscriptionEither;
+      if (E.isLeft(foundSubscriptionEither)) {
+        subscriptionsTotal.inc({ status: 'token_not_found' });
+
+        return foundSubscriptionEither;
+      }
+
+      await this.subscriptionRepository.removeSubscription(foundSubscriptionEither.value);
+      activeSubscriptionCount.dec();
+
+      const repoId = foundSubscriptionEither.value.repoId;
+
+      const subscriptionsCount = await this.subscriptionRepository.countByRepoId(repoId);
+
+      if (!subscriptionsCount) {
+        await this.repoService.removeRepo(repoId);
+      }
+
+      logger.info(`Subscription removed successfully`);
+
+      subscriptionsTotal.inc({ status: 'unsubscribed' });
+
+      return E.right(undefined);
+    } finally {
+      end();
     }
-
-    await this.subscriptionRepository.removeSubscription(foundSubscriptionEither.value);
-    activeSubscriptionCount.dec();
-
-    const repoId = foundSubscriptionEither.value.repoId;
-
-    const subscriptionsCount = await this.subscriptionRepository.countByRepoId(repoId);
-
-    if (!subscriptionsCount) {
-      await this.repoService.removeRepo(repoId);
-    }
-
-    logger.info(`Subscription removed successfully`);
-
-    subscriptionsTotal.inc({ status: 'unsubscribed' });
-
-    return E.right(undefined);
   }
 
   async getAllSubscriptionsByEmail(email: string): Promise<E.Either<DomainError, MinifiedSubscription[]>> {

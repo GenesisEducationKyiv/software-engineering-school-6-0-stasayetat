@@ -1,4 +1,11 @@
-import { Counter, Gauge } from 'prom-client';
+import { Counter, Gauge, Histogram } from 'prom-client';
+
+export const subscriptionOperationDuration = new Histogram({
+  name: 'subscription_operation_duration_seconds',
+  help: 'Duration of subscription operations in seconds',
+  labelNames: ['type'],
+  buckets: [0.01, 0.05, 0.1, 0.3, 0.5, 1, 2],
+});
 
 export const activeSubscriptionCount = new Gauge({
   name: 'active_subscriptions_count',

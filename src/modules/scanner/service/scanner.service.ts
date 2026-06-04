@@ -6,7 +6,7 @@ import {
 } from '@modules/subscription/repository/subscription.repository.interface';
 import { E } from '@shared/either';
 import { logger } from '@shared/logger';
-import { scannerRunDuration } from '@shared/metrics';
+import { scannerRunDuration, scannerRunsTotal } from '@shared/metrics';
 import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
 import { Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
@@ -69,10 +69,12 @@ export class ScannerService {
       await Promise.all(notifyInfos.map(info => this.notifySubscribers(info)));
 
       logger.info(`Scanning successfully end`);
+      scannerRunsTotal.inc({ status: 'success' });
     } catch (error) {
       const message = getErrorMessage(error);
 
       logger.error(`Something went wrong while scanning repos: ${message}`);
+      scannerRunsTotal.inc({ status: 'error' });
     } finally {
       end();
     }

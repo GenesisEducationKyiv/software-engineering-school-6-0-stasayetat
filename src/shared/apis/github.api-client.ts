@@ -54,7 +54,7 @@ export class GithubApiClient implements TagFetcher {
 
       if (response.status === 404) {
         githubApiRequestsTotal.inc({ status: 'failed' });
-        end({ status: 'rate_limited' });
+        end({ status: 'failed' });
 
         return E.left({ code: DomainErrorCode.GITHUB_REPO_NOT_FOUND, message: JSON.stringify(response.data) });
       }
