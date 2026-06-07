@@ -6,6 +6,7 @@ import {
   ISubscriptionRepository,
   SUBSCRIPTION_REPOSITORY,
 } from '@notifier/subscription/repository/subscription.repository.interface';
+import { ReleaseNotificationService } from '@notifier/subscription/service/release-notification.service';
 import { Request, Response, Router } from 'express';
 import { container } from 'tsyringe';
 
@@ -41,5 +42,26 @@ internalRouter.patch(
     await repoRepository.updateLastSeenTag(id, tag);
 
     res.json({ message: 'Tag updated' });
+  },
+);
+
+internalRouter.post(
+  '/repos/:id/notify',
+  validateParams(UpdateTagParamDto),
+  validateBody(UpdateTagBodyDto),
+  async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    const { tag } = req.body as UpdateTagBodyDto;
+
+    const releaseNotificationService = container.resolve(ReleaseNotificationService);
+    const result = await releaseNotificationService.notifyNewRelease(id, tag);
+
+    if (!result) {
+      res.status(404).json({ message: 'Repo not found' });
+
+      return;
+    }
+
+    res.json({ message: 'Notified' });
   },
 );

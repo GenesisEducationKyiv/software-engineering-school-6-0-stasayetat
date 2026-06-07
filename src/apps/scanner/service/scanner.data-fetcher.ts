@@ -1,12 +1,11 @@
 import { env } from '@shared/env';
 import { logger } from '@shared/logger';
-import { Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import axios, { AxiosInstance } from 'axios';
 import { injectable } from 'tsyringe';
 
 @injectable()
-export class ScannerDataService {
+export class ScannerDataFetcher {
   private readonly http: AxiosInstance;
 
   constructor() {
@@ -24,15 +23,7 @@ export class ScannerDataService {
     return response.data.data;
   }
 
-  async getSubscribersByRepoIds(repoIds: string[]): Promise<Subscription[]> {
-    const response = await this.http.get<{ data: Subscription[] }>('/internal/subscribers', {
-      params: { repoIds: repoIds.join(',') },
-    });
-
-    return response.data.data;
-  }
-
-  async updateLastSeenTag(repoId: string, tag: string): Promise<void> {
-    await this.http.patch(`/internal/repos/${repoId}/tag`, { tag });
+  async notifyNewRelease(repoId: string, tag: string): Promise<void> {
+    await this.http.post(`/internal/repos/${repoId}/notify`, { tag });
   }
 }

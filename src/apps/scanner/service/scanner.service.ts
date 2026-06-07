@@ -1,23 +1,20 @@
 import { E } from '@shared/either';
 import { logger } from '@shared/logger';
 import { scannerRunDuration, scannerRunsTotal } from '@shared/metrics';
-import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
-import { Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { getErrorMessage } from '@shared/utils';
-import { inject, injectable } from 'tsyringe';
+import { injectable } from 'tsyringe';
 
-import { RepoNotifyInfo, RepoScanError, RepoScanSuccess } from '../scanner.types';
+import { RepoScanError, RepoScanSuccess } from '../scanner.types';
 import { hasNewRelease } from '../scanner.utils';
 import { RepoTagFetcher } from './repo-tag.fetcher';
-import { ScannerDataService } from './scanner.data-service';
+import { ScannerDataFetcher } from './scanner.data-fetcher';
 
 @injectable()
 export class ScannerService {
   constructor(
-    private readonly dataService: ScannerDataService,
+    private readonly dataFetcher: ScannerDataFetcher,
     private readonly repoTagFetcher: RepoTagFetcher,
-    @inject(NOTIFICATION_SERVICE) private readonly notifierService: NotificationService,
   ) {}
 
   async run(): Promise<void> {
@@ -25,7 +22,7 @@ export class ScannerService {
 
     try {
       logger.info('Start scanning...');
-      const allRepos = await this.dataService.getAllRepos();
+      const allRepos = await this.dataFetcher.getAllRepos();
 
       if (!allRepos.length) {
         logger.info(`There is no repos. Finishing job...`);
@@ -37,31 +34,19 @@ export class ScannerService {
 
       logger.info(`Scanned ${successful.length} repos`);
 
-      const repoToNotify = successful.filter(hasNewRelease);
+      const reposToNotify = successful.filter(hasNewRelease);
 
-      if (!repoToNotify.length) {
+      if (!reposToNotify.length) {
         logger.info('No repos to notify. Finishing job...');
 
         return;
       }
 
-      logger.info(`Repos ready to notify: ${repoToNotify.length}`);
+      logger.info(`Repos ready to notify: ${reposToNotify.length}`);
 
-      const repoIds = repoToNotify.map(repo => repo.currentRepo.id);
-
-      const subscriptions = await this.dataService.getSubscribersByRepoIds(repoIds);
-
-      if (!subscriptions.length) {
-        logger.info(`There is no subscriptions. Finishing job...`);
-
-        return;
-      }
-
-      logger.info(`Subscribers ready to notify: ${repoToNotify.length}`);
-
-      const notifyInfos = this.buildNotifyInfos(repoToNotify, subscriptions);
-
-      await Promise.all(notifyInfos.map(info => this.notifySubscribers(info)));
+      await Promise.all(
+        reposToNotify.map(({ currentRepo, latestTag }) => this.dataFetcher.notifyNewRelease(currentRepo.id, latestTag)),
+      );
 
       logger.info(`Scanning successfully end`);
       scannerRunsTotal.inc({ status: 'success' });
@@ -73,32 +58,6 @@ export class ScannerService {
     } finally {
       end();
     }
-  }
-
-  private async notifySubscribers({ subscribers, newTag, repo }: RepoNotifyInfo) {
-    await Promise.all(
-      subscribers.map(subscriber =>
-        this.notifierService.sendReleaseNotification(subscriber.email, repo, newTag, subscriber.token),
-      ),
-    );
-
-    await this.dataService.updateLastSeenTag(repo.id, newTag);
-  }
-
-  private buildNotifyInfos(repoToNotify: RepoScanSuccess[], subscriptions: Subscription[]): RepoNotifyInfo[] {
-    const subscriptionsByRepoId = new Map<string, Subscription[]>();
-
-    for (const subscription of subscriptions) {
-      const existing = subscriptionsByRepoId.get(subscription.repoId) ?? [];
-      existing.push(subscription);
-      subscriptionsByRepoId.set(subscription.repoId, existing);
-    }
-
-    return repoToNotify.map(({ currentRepo, latestTag }) => ({
-      newTag: latestTag,
-      repo: currentRepo,
-      subscribers: subscriptionsByRepoId.get(currentRepo.id) ?? [],
-    }));
   }
 
   private async scanAllRepos(allRepos: Repository[]) {
