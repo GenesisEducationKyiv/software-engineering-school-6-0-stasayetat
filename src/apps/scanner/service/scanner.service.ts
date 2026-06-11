@@ -44,7 +44,7 @@ export class ScannerService {
 
       logger.info(`Repos ready to notify: ${reposToNotify.length}`);
 
-      await Promise.all(
+      await Promise.allSettled(
         reposToNotify.map(({ currentRepo, latestTag }) => this.dataFetcher.notifyNewRelease(currentRepo.id, latestTag)),
       );
 

@@ -1,9 +1,8 @@
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsString, IsUUID } from 'class-validator';
 
 export class GetSubscribersQueryDto {
-  @IsOptional()
   @IsString()
-  repoIds?: string;
+  repoIds!: string;
 }
 
 export class UpdateTagParamDto {

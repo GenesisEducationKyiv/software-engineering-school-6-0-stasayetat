@@ -6,8 +6,6 @@ import {
 import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
 import { inject, injectable } from 'tsyringe';
 
-export const REPO_NOT_FOUND = Symbol('REPO_NOT_FOUND');
-
 @injectable()
 export class ReleaseNotificationService {
   constructor(
@@ -25,7 +23,7 @@ export class ReleaseNotificationService {
 
     const subscribers = await this.subscriptionRepository.getSubscriptionsByRepoIds([repoId]);
 
-    await Promise.all(
+    await Promise.allSettled(
       subscribers.map(({ email, token }) => this.notificationService.sendReleaseNotification(email, repo, tag, token)),
     );
 
