@@ -91,7 +91,7 @@ services:
     environment:
       NODE_ENV: production
       REDIS_URL: redis://redis:6379
-      SCANNER_API_URL: http://notifier:8081
+      NOTIFIER_API_URL: http://notifier:8081
     command: node .build/apps/scanner/main.js
 
 volumes:

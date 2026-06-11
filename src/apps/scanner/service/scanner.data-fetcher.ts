@@ -10,7 +10,7 @@ export class ScannerDataFetcher {
 
   constructor() {
     this.http = axios.create({
-      baseURL: env.SCANNER_API_URL,
+      baseURL: env.NOTIFIER_API_URL,
       headers: { 'x-api-key': env.APP_API_KEY },
     });
   }

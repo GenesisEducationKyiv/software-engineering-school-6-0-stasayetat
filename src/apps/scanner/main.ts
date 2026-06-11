@@ -16,7 +16,7 @@ process.on('uncaughtException', error => {
 });
 
 function bootstrap() {
-  logger.info(`Scanner service starting. API target: ${env.SCANNER_API_URL}`);
+  logger.info(`Scanner service starting. API target: ${env.NOTIFIER_API_URL}`);
 
   const scanner = container.resolve(ScannerService);
 
