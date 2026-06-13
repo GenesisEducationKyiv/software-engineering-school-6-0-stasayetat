@@ -2,11 +2,14 @@ import 'reflect-metadata';
 import './container';
 import '@notifier/subscription/subscription.cron-controller';
 
+import { ReleaseNotificationConsumer } from '@notifier/subscription/release-notification.consumer';
 import { db, repos, subscriptions } from '@shared/db';
 import { env } from '@shared/env';
 import { logger } from '@shared/logger';
 import { activeSubscriptionCount, totalReposCount } from '@shared/metrics';
+import { RabbitMQClient } from '@shared/rabbitmq';
 import { count } from 'drizzle-orm';
+import { container } from 'tsyringe';
 
 import { startGrpcServer } from './grpc/grpc.server';
 import { server } from './server';
@@ -34,6 +37,15 @@ async function bootstrap() {
   });
 
   startGrpcServer(env.GRPC_PORT);
+
+  const rabbitMQClient = container.resolve(RabbitMQClient);
+  await rabbitMQClient.connect();
+  logger.info('RabbitMQ connected');
+
+  const releaseNotificationConsumer = container.resolve(ReleaseNotificationConsumer);
+  await releaseNotificationConsumer.start();
+
+  logger.info('RabbitMQ consumer started');
 }
 
 void bootstrap();

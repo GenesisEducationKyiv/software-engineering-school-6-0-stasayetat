@@ -1,14 +1,16 @@
 import { env } from '@shared/env';
 import { logger } from '@shared/logger';
+import { EventPublisher } from '@shared/rabbitmq/event-publisher';
+import { EVENT_PUBLISHER } from '@shared/rabbitmq/rabbitmq.module';
 import { Repository } from '@shared/types/repository.types';
 import axios, { AxiosInstance } from 'axios';
-import { injectable } from 'tsyringe';
+import { inject, injectable } from 'tsyringe';
 
 @injectable()
 export class ScannerDataFetcher {
   private readonly http: AxiosInstance;
 
-  constructor() {
+  constructor(@inject(EVENT_PUBLISHER) private readonly eventPublisher: EventPublisher) {
     this.http = axios.create({
       baseURL: env.NOTIFIER_API_URL,
       headers: { 'x-api-key': env.APP_API_KEY },
@@ -23,7 +25,7 @@ export class ScannerDataFetcher {
     return response.data.data;
   }
 
-  async notifyNewRelease(repoId: string, tag: string): Promise<void> {
-    await this.http.post(`/internal/repos/${repoId}/notify`, { tag });
+  notifyNewRelease(repoId: string, tag: string): Promise<void> {
+    return this.eventPublisher.publish('releases', 'new_release_detected', { repoId, tag });
   }
 }
