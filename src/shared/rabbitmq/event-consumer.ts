@@ -14,18 +14,19 @@ export class EventConsumer {
     await channel.assertQueue(queue, { durable: true });
     await channel.bindQueue(queue, exchange, routingKey);
 
-    void channel.consume(queue, msg => {
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    await channel.consume(queue, async msg => {
       if (!msg) return;
 
-      const payload = JSON.parse(msg.content.toString()) as unknown;
+      try {
+        const payload = JSON.parse(msg.content.toString()) as unknown;
 
-      void handler(payload)
-        .catch((error: unknown) => {
-          logger.error(`Consumer error on queue ${queue}: ${String(error)}`);
-        })
-        .finally(() => {
-          channel.ack(msg);
-        });
+        await handler(payload);
+      } catch (error) {
+        logger.error(`Consumer error on queue ${queue}: ${String(error)}`);
+      } finally {
+        channel.ack(msg);
+      }
     });
   }
 }
