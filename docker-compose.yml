@@ -27,6 +27,11 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.4.1
@@ -75,9 +80,12 @@ services:
   notifier:
     build: .
     depends_on:
-      - postgres
-      - redis
-      - rabbitmq
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     env_file:
       - ./profiles/.env.production
     environment:
@@ -92,9 +100,12 @@ services:
   scanner:
     build: .
     depends_on:
-      - redis
-      - notifier
-      - rabbitmq
+      redis:
+        condition: service_started
+      notifier:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     env_file:
       - ./profiles/.env.production
     environment:
