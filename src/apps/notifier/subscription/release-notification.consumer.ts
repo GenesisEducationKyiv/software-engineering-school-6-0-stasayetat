@@ -1,6 +1,7 @@
 import { ReleaseNotificationService } from '@notifier/subscription/service/release-notification.service';
 import { EventConsumer } from '@shared/rabbitmq/event-consumer';
 import { EVENT_CONSUMER } from '@shared/rabbitmq/rabbitmq.module';
+import { NewReleaseDetectedEventSchema } from '@shared/rabbitmq/rabbitmq.types';
 import { inject, injectable } from 'tsyringe';
 
 @injectable()
@@ -16,7 +17,7 @@ export class ReleaseNotificationConsumer {
       exchange: 'releases',
       routingKey: 'new_release_detected',
       handler: async payload => {
-        const { repoId, tag } = payload as { repoId: string; tag: string };
+        const { repoId, tag } = NewReleaseDetectedEventSchema.parse(payload);
 
         await this.releaseNotificationService.notifyNewRelease(repoId, tag);
       },
