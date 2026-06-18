@@ -22,10 +22,10 @@ export class EventConsumer {
         const payload = JSON.parse(msg.content.toString()) as unknown;
 
         await handler(payload);
+        channel.ack(msg);
       } catch (error) {
         logger.error(`Consumer error on queue ${queue}: ${String(error)}`);
-      } finally {
-        channel.ack(msg);
+        channel.reject(msg, false);
       }
     });
   }

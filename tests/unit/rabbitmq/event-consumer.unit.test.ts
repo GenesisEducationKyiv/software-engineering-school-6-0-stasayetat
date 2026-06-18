@@ -9,6 +9,7 @@ describe('EventConsumer', () => {
     bindQueue: ReturnType<typeof vi.fn>;
     consume: ReturnType<typeof vi.fn>;
     ack: ReturnType<typeof vi.fn>;
+    reject: ReturnType<typeof vi.fn>;
   };
   let mockClient: RabbitMQClient;
 
@@ -19,6 +20,7 @@ describe('EventConsumer', () => {
       bindQueue: vi.fn().mockResolvedValue(undefined),
       consume: vi.fn(),
       ack: vi.fn(),
+      reject: vi.fn(),
     };
     mockClient = { getChannel: vi.fn().mockReturnValue(mockChannel) } as unknown as RabbitMQClient;
     consumer = new EventConsumer(mockClient);
@@ -48,7 +50,7 @@ describe('EventConsumer', () => {
     expect(mockChannel.ack).toHaveBeenCalledWith(msg);
   });
 
-  it('should ack even when handler throws', async () => {
+  it('should reject without requeue when handler throws', async () => {
     const handler = vi.fn().mockRejectedValue(new Error('handler failed'));
     const msg = { content: Buffer.from(JSON.stringify({ repoId: 'abc', tag: 'v1.0.0' })) };
 
@@ -56,7 +58,8 @@ describe('EventConsumer', () => {
 
     await consumer.consume({queue: 'release_notifications', exchange: 'releases', routingKey: 'new_release_detected', handler});
 
-    expect(mockChannel.ack).toHaveBeenCalledWith(msg);
+    expect(mockChannel.reject).toHaveBeenCalledWith(msg, false);
+    expect(mockChannel.ack).not.toHaveBeenCalled();
   });
 
   it('should skip null messages without acking', async () => {
@@ -67,12 +70,12 @@ describe('EventConsumer', () => {
     expect(mockChannel.ack).not.toHaveBeenCalled();
   });
 
-  it('should ack and log error on invalid JSON', async () => {
+  it('should reject and log error on invalid JSON', async () => {
     const msg = { content: Buffer.from('not-json') };
     mockChannel.consume.mockImplementation((_queue: string, cb: (msg: unknown) => void) => { cb(msg); });
 
     await consumer.consume({ queue: 'release_notifications', exchange: 'releases', routingKey: 'new_release_detected', handler: vi.fn() });
 
-    expect(mockChannel.ack).toHaveBeenCalledWith(msg);
+    expect(mockChannel.reject).toHaveBeenCalledWith(msg, false);
   });
 });
