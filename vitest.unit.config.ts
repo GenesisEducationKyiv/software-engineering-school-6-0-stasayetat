@@ -21,7 +21,8 @@ const config = defineConfig({
   resolve: {
     alias: {
       '@shared': path.resolve(__dirname, './src/shared'),
-      '@modules': path.resolve(__dirname, './src/modules'),
+      '@notifier': path.resolve(__dirname, './src/apps/notifier'),
+      '@scanner': path.resolve(__dirname, './src/apps/scanner'),
     },
   },
 });

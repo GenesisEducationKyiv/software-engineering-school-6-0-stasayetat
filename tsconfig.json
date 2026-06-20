@@ -23,7 +23,10 @@
     "types": ["vitest/globals"],
     "paths": {
       "@shared/*": ["./src/shared/*"],
-      "@modules/*": ["./src/modules/*"]
+      "@notifier/*": ["./src/apps/notifier/*"],
+      "@notifier": ["./src/apps/notifier/index"],
+      "@scanner/*": ["./src/apps/scanner/*"],
+      "@scanner": ["./src/apps/scanner/index"]
     }
   },
   "include": [

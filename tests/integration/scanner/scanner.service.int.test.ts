@@ -1,18 +1,14 @@
-import { ScannerService } from '@modules/scanner';
-import { RepoTagFetcher } from '@modules/scanner/service/repo-tag.fetcher';
-import { RepoRepository } from '@modules/subscription/repository/repo.repository';
-import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
+import { RepoRepository } from '@notifier/subscription/repository/repo.repository';
+import { ScannerService } from '@scanner';
+import { RepoTagFetcher } from '@scanner/service/repo-tag.fetcher';
+import { ScannerDataFetcher } from '@scanner/service/scanner.data-fetcher';
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
 import { E } from '@shared/either';
 import { DomainErrorCode, TagsResponse } from '@shared/types';
-import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mockNotifierService = {
-  sendConfirmationEmail: vi.fn().mockResolvedValue(undefined),
-  sendReleaseNotification: vi.fn().mockResolvedValue(undefined),
-};
+const mockNotifyNewRelease = vi.fn().mockResolvedValue(undefined);
 
 const seedRepo = async (repo: string, lastSeenTag: string) => {
   const [newRepo] = await db.insert(repos).values({ repo, last_seen_tag: lastSeenTag }).returning();
@@ -46,11 +42,14 @@ describe('ScannerService (integration)', () => {
       getTags: vi.fn(),
     };
 
+    const repoRepository = new RepoRepository();
+
     service = new ScannerService(
-      new RepoRepository(),
+      {
+        getAllRepos: () => repoRepository.getAllRepos(),
+        notifyNewRelease: mockNotifyNewRelease,
+      } as unknown as ScannerDataFetcher,
       new RepoTagFetcher(mockTagFetcher),
-      new SubscriptionRepository(),
-      mockNotifierService as any,
     );
   });
 
@@ -58,7 +57,7 @@ describe('ScannerService (integration)', () => {
     it('should return early if no repos in DB', async () => {
       await service.run();
 
-      expect(mockNotifierService.sendReleaseNotification).not.toHaveBeenCalled();
+      expect(mockNotifyNewRelease).not.toHaveBeenCalled();
     });
 
     it('should not notify if tag has not changed', async () => {
@@ -71,15 +70,11 @@ describe('ScannerService (integration)', () => {
 
       await service.run();
 
-      expect(mockNotifierService.sendReleaseNotification).not.toHaveBeenCalled();
-
-      const repoInDb = (await db.select().from(repos))[0];
-      expect(repoInDb.last_seen_tag).toBe('v1.0.0');
+      expect(mockNotifyNewRelease).not.toHaveBeenCalled();
     });
 
-    it('should notify subscribers and update last_seen_tag when new release found', async () => {
+    it('should notify when new release found', async () => {
       const repo = await seedRepo('facebook/react', 'v1.0.0');
-      await seedConfirmedSubscription('test@gmail.com', repo.id);
 
       vi.mocked(mockTagFetcher.getTags).mockResolvedValue(
         E.right([{ name: 'v2.0.0' }] as TagsResponse),
@@ -87,32 +82,10 @@ describe('ScannerService (integration)', () => {
 
       await service.run();
 
-      expect(mockNotifierService.sendReleaseNotification).toHaveBeenCalledWith(
-        'test@gmail.com',
-        repo,
-        'v2.0.0',
-        expect.any(String),
-      );
-
-      const repoInDb = (await db.select().from(repos))[0];
-      expect(repoInDb.last_seen_tag).toBe('v2.0.0');
+      expect(mockNotifyNewRelease).toHaveBeenCalledWith(repo.id, 'v2.0.0');
     });
 
-    it('should notify multiple subscribers for the same repo', async () => {
-      const repo = await seedRepo('facebook/react', 'v1.0.0');
-      await seedConfirmedSubscription('user1@gmail.com', repo.id);
-      await seedConfirmedSubscription('user2@gmail.com', repo.id);
-
-      vi.mocked(mockTagFetcher.getTags).mockResolvedValue(
-        E.right([{ name: 'v2.0.0' }] as TagsResponse),
-      );
-
-      await service.run();
-
-      expect(mockNotifierService.sendReleaseNotification).toHaveBeenCalledTimes(2);
-    });
-
-    it('should skip repo if github api fails and continue with others', async () => {
+    it('should skip repo if github fetch fails and continue with others', async () => {
       const repo1 = await seedRepo('facebook/react', 'v1.0.0');
       const repo2 = await seedRepo('microsoft/typescript', 'v4.0.0');
       await seedConfirmedSubscription('test@gmail.com', repo1.id);
@@ -124,29 +97,20 @@ describe('ScannerService (integration)', () => {
 
       await service.run();
 
-      expect(mockNotifierService.sendReleaseNotification).toHaveBeenCalledTimes(1);
-      expect(mockNotifierService.sendReleaseNotification).toHaveBeenCalledWith(
-        'test@gmail.com',
-        repo2,
-        'v5.0.0',
-        expect.any(String),
-      );
-
-      const repo2InDb = (await db.select().from(repos).where(eq(repos.id, repo2.id)))[0];
-      expect(repo2InDb.last_seen_tag).toBe('v5.0.0');
+      expect(mockNotifyNewRelease).toHaveBeenCalledTimes(1);
+      expect(mockNotifyNewRelease).toHaveBeenCalledWith(repo2.id, 'v5.0.0');
     });
 
-    it('should not notify unconfirmed subscribers', async () => {
-      const repo = await seedRepo('facebook/react', 'v1.0.0');
-      await db.insert(subscriptions).values({ email: 'test@gmail.com', repoId: repo.id, confirmed: false });
+    it('should not notify if no repos have new releases', async () => {
+      await seedRepo('facebook/react', 'v1.0.0');
 
       vi.mocked(mockTagFetcher.getTags).mockResolvedValue(
-        E.right([{ name: 'v2.0.0' }] as TagsResponse),
+        E.right([{ name: 'v1.0.0' }] as TagsResponse),
       );
 
       await service.run();
 
-      expect(mockNotifierService.sendReleaseNotification).not.toHaveBeenCalled();
+      expect(mockNotifyNewRelease).not.toHaveBeenCalled();
     });
   });
 });

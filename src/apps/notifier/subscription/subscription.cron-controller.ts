@@ -1,9 +1,7 @@
-import {
-  ISubscriptionRepository,
-  SUBSCRIPTION_REPOSITORY,
-} from '@modules/subscription/repository/subscription.repository.interface';
 import cron from 'node-cron';
 import { container } from 'tsyringe';
+
+import { ISubscriptionRepository, SUBSCRIPTION_REPOSITORY } from './repository/subscription.repository.interface';
 
 const subscriptionRepository = container.resolve<ISubscriptionRepository>(SUBSCRIPTION_REPOSITORY);
 

@@ -13,6 +13,12 @@ export class RepoRepository implements IRepoRepository {
     return found ?? null;
   }
 
+  async getRepoById(id: string): Promise<Repository | null> {
+    const [found] = await db.select().from(repos).where(eq(repos.id, id)).limit(1);
+
+    return found ?? null;
+  }
+
   async createRepo(repo: string, lastSeenTag: string): Promise<Repository> {
     const [newRepo] = await db.insert(repos).values({ repo, last_seen_tag: lastSeenTag }).returning();
 

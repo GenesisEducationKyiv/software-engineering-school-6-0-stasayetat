@@ -1,4 +1,5 @@
-import { subscriptionRouter } from '@modules/subscription';
+import { internalRouter } from '@notifier/routes/internal.router';
+import { subscriptionRouter } from '@notifier/subscription';
 import { metricsRouter } from '@shared/metrics';
 import { errorHandler } from '@shared/utils';
 import cors from 'cors';
@@ -19,6 +20,7 @@ server.get('/', (_req, res) => {
 });
 
 server.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-server.use('/api', subscriptionRouter);
+server.use('/notifier', subscriptionRouter);
+server.use('/internal', internalRouter);
 server.use(metricsRouter);
 server.use(errorHandler);

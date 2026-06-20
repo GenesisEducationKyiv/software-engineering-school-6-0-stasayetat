@@ -1,4 +1,4 @@
-import { hasNewRelease } from '@modules/scanner';
+import { hasNewRelease } from '@scanner';
 import { describe, expect, it } from 'vitest';
 
 const mockRepo = {

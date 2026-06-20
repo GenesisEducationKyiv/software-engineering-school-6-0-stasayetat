@@ -1,2 +1,2 @@
 export * from './service/subscription.service';
-export * from './subscription.controller';
+export * from './subscription.router';

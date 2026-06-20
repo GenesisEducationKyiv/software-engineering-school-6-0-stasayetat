@@ -1,7 +1,7 @@
 // Original file: src/grpc/subscription.proto
+
 import type * as grpc from '@grpc/grpc-js';
 import type { MethodDefinition } from '@grpc/proto-loader';
-
 import type {
   GetSubscriptionsRequest as _subscription_GetSubscriptionsRequest,
   GetSubscriptionsRequest__Output as _subscription_GetSubscriptionsRequest__Output,

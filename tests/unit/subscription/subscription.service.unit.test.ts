@@ -1,6 +1,6 @@
-import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
-import { RepoService } from '@modules/subscription/service/repo.service';
-import { SubscriptionService } from '@modules/subscription/service/subscription.service';
+import { SubscriptionRepository } from '@notifier/subscription/repository/subscription.repository';
+import { RepoService } from '@notifier/subscription/service/repo.service';
+import { SubscriptionService } from '@notifier/subscription/service/subscription.service';
 import { E } from '@shared/either';
 import { NotificationEmailService } from '@shared/notification/notification.email-service';
 import { DomainErrorCode } from '@shared/types';

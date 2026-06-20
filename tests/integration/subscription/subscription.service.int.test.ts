@@ -1,7 +1,7 @@
-import { RepoRepository } from '@modules/subscription/repository/repo.repository';
-import { SubscriptionRepository } from '@modules/subscription/repository/subscription.repository';
-import { RepoService } from '@modules/subscription/service/repo.service';
-import { SubscriptionService } from '@modules/subscription/service/subscription.service';
+import { RepoRepository } from '@notifier/subscription/repository/repo.repository';
+import { SubscriptionRepository } from '@notifier/subscription/repository/subscription.repository';
+import { RepoService } from '@notifier/subscription/service/repo.service';
+import { SubscriptionService } from '@notifier/subscription/service/subscription.service';
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
 import { db, repos, subscriptions } from '@shared/db';
 import { E } from '@shared/either';

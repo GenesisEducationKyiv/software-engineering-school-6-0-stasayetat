@@ -66,7 +66,7 @@ services:
     depends_on:
       - prometheus
 
-  app:
+  notifier:
     build: .
     depends_on:
       - postgres
@@ -79,7 +79,20 @@ services:
       REDIS_URL: redis://redis:6379
     ports:
       - "8081:8081"
-    command: sh -c "node .build/shared/db/migrate.js && node .build/main.js"
+    command: sh -c "node .build/shared/db/migrate.js && node .build/apps/notifier/main.js"
+
+  scanner:
+    build: .
+    depends_on:
+      - redis
+      - notifier
+    env_file:
+      - ./profiles/.env.production
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+      NOTIFIER_API_URL: http://notifier:8081
+    command: node .build/apps/scanner/main.js
 
 volumes:
   postgres_data:
