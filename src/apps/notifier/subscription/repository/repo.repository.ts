@@ -29,6 +29,10 @@ export class RepoRepository implements IRepoRepository {
     await db.delete(repos).where(eq(repos.id, repoId));
   }
 
+  async recreateRepo(repo: Repository): Promise<void> {
+    await db.insert(repos).values({ id: repo.id, repo: repo.repo, last_seen_tag: repo.last_seen_tag, checkedAt: repo.checkedAt });
+  }
+
   getAllRepos(): Promise<Repository[]> {
     return db.select().from(repos);
   }
