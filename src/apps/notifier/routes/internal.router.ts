@@ -1,24 +1,17 @@
 import { GetSubscribersQueryDto, UpdateTagBodyDto, UpdateTagParamDto } from '@notifier/dtos';
 import { validateBody, validateParams, validateQuery } from '@notifier/middlewares';
-import { apiKeyMiddleware } from '@notifier/middlewares/api-key.middleware';
 import { IRepoRepository, REPO_REPOSITORY } from '@notifier/subscription/repository/repo.repository.interface';
 import {
   ISubscriptionRepository,
   SUBSCRIPTION_REPOSITORY,
 } from '@notifier/subscription/repository/subscription.repository.interface';
+import { apiKeyMiddleware } from '@shared/middlewares/api-key.middleware';
 import { Request, Response, Router } from 'express';
 import { container } from 'tsyringe';
 
 export const internalRouter = Router();
 
 internalRouter.use(apiKeyMiddleware);
-
-internalRouter.get('/repos', async (_req: Request, res: Response) => {
-  const repoRepository = container.resolve<IRepoRepository>(REPO_REPOSITORY);
-  const repos = await repoRepository.getAllRepos();
-
-  res.json({ data: repos });
-});
 
 internalRouter.get('/subscribers', validateQuery(GetSubscribersQueryDto), async (req: Request, res: Response) => {
   const repoIds = (req.query['repoIds'] as string).split(',');
