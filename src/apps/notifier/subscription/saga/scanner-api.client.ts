@@ -15,11 +15,11 @@ export class ScannerApiClient implements IScannerApiClient {
     });
   }
 
-  async enrollRepo(id: string, repo: string, lastSeenTag: string): Promise<void> {
-    await this.http.post('/internal/repos/enroll', { id, repo, lastSeenTag });
+  async trackRepo(id: string, repo: string, lastSeenTag: string): Promise<void> {
+    await this.http.post('/internal/repos/track', { id, repo, lastSeenTag });
   }
 
-  async unenrollRepo(id: string): Promise<void> {
+  async untrackRepo(id: string): Promise<void> {
     await this.http.delete(`/internal/repos/${id}`);
   }
 }

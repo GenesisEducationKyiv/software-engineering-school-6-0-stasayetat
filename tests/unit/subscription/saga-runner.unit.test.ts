@@ -1,5 +1,6 @@
 import { ISagaRepository } from '@notifier/subscription/saga/saga.repository.interface';
-import { SagaRunner, SagaStep } from '@notifier/subscription/saga/saga-runner';
+import { SagaStep } from '@notifier/subscription/saga/saga.types';
+import { SagaRunner } from '@notifier/subscription/saga/saga-runner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('SagaRunner', () => {

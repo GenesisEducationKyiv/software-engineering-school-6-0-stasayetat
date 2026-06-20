@@ -12,31 +12,31 @@ describe('scanner internal router', () => {
   app.use('/internal', internalRouter);
 
   it('rejects requests without a valid api key', async () => {
-    const response = await request(app).post('/internal/repos/enroll').send({ id: 'a', repo: 'b', lastSeenTag: 'v1' });
+    const response = await request(app).post('/internal/repos/track').send({ id: 'a', repo: 'b', lastSeenTag: 'v1' });
 
     expect(response.status).toBe(401);
   });
 
-  it('enrolls a repo', async () => {
-    const enroll = vi.fn().mockResolvedValue({ id: 'a', repo: 'owner/repo', last_seen_tag: 'v1', checkedAt: new Date() });
-    container.registerInstance(TRACKED_REPO_REPOSITORY, { enroll, unenroll: vi.fn() } as any);
+  it('tracks a repo', async () => {
+    const track = vi.fn().mockResolvedValue({ id: 'a', repo: 'owner/repo', last_seen_tag: 'v1', checkedAt: new Date() });
+    container.registerInstance(TRACKED_REPO_REPOSITORY, { track, untrack: vi.fn() } as any);
 
     const response = await request(app)
-      .post('/internal/repos/enroll')
+      .post('/internal/repos/track')
       .set('x-api-key', env.APP_API_KEY)
       .send({ id: 'a', repo: 'owner/repo', lastSeenTag: 'v1' });
 
     expect(response.status).toBe(201);
-    expect(enroll).toHaveBeenCalledWith('a', 'owner/repo', 'v1');
+    expect(track).toHaveBeenCalledWith('a', 'owner/repo', 'v1');
   });
 
-  it('unenrolls a repo', async () => {
-    const unenroll = vi.fn().mockResolvedValue(undefined);
-    container.registerInstance(TRACKED_REPO_REPOSITORY, { enroll: vi.fn(), unenroll } as any);
+  it('untracks a repo', async () => {
+    const untrack = vi.fn().mockResolvedValue(undefined);
+    container.registerInstance(TRACKED_REPO_REPOSITORY, { track: vi.fn(), untrack } as any);
 
     const response = await request(app).delete('/internal/repos/a').set('x-api-key', env.APP_API_KEY);
 
     expect(response.status).toBe(200);
-    expect(unenroll).toHaveBeenCalledWith('a');
+    expect(untrack).toHaveBeenCalledWith('a');
   });
 });

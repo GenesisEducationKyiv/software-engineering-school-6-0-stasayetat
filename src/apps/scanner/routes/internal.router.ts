@@ -7,20 +7,20 @@ export const internalRouter = Router();
 
 internalRouter.use(apiKeyMiddleware);
 
-internalRouter.post('/repos/enroll', async (req: Request, res: Response) => {
+internalRouter.post('/repos/track', async (req: Request, res: Response) => {
   const { id, repo, lastSeenTag } = req.body as { id: string; repo: string; lastSeenTag: string };
 
   const trackedRepoRepository = container.resolve<ITrackedRepoRepository>(TRACKED_REPO_REPOSITORY);
-  const enrolled = await trackedRepoRepository.enroll(id, repo, lastSeenTag);
+  const tracked = await trackedRepoRepository.track(id, repo, lastSeenTag);
 
-  res.status(201).json({ data: enrolled });
+  res.status(201).json({ data: tracked });
 });
 
 internalRouter.delete('/repos/:id', async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
 
   const trackedRepoRepository = container.resolve<ITrackedRepoRepository>(TRACKED_REPO_REPOSITORY);
-  await trackedRepoRepository.unenroll(id);
+  await trackedRepoRepository.untrack(id);
 
-  res.json({ message: 'Repo unenrolled' });
+  res.json({ message: 'Repo untracked' });
 });

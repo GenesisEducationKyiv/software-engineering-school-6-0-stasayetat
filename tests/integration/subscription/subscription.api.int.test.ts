@@ -27,8 +27,8 @@ const mockNotificationService = {
   sendReleaseNotification: vi.fn(),
 } satisfies NotificationService;
 const mockScannerApiClient = {
-  enrollRepo: vi.fn(),
-  unenrollRepo: vi.fn(),
+  trackRepo: vi.fn(),
+  untrackRepo: vi.fn(),
 } satisfies IScannerApiClient;
 
 container.register(TAGS_FETCHER, { useValue: mockTagFetcher });
@@ -53,8 +53,8 @@ describe('Subscription API (integration)', () => {
     mockTagFetcher.getTags.mockResolvedValue(E.right([{ name: 'v1.0.0' }] as TagsResponse));
     mockNotificationService.sendConfirmationEmail.mockResolvedValue(E.right({ success: true }));
     mockNotificationService.sendReleaseNotification.mockResolvedValue(undefined);
-    mockScannerApiClient.enrollRepo.mockResolvedValue(undefined);
-    mockScannerApiClient.unenrollRepo.mockResolvedValue(undefined);
+    mockScannerApiClient.trackRepo.mockResolvedValue(undefined);
+    mockScannerApiClient.untrackRepo.mockResolvedValue(undefined);
   });
 
   afterAll(async () => {
@@ -139,8 +139,8 @@ describe('Subscription API (integration)', () => {
       expect(res.status).toBe(404);
     });
 
-    it('should return 500 and roll back the subscription if scanner enrollment fails', async () => {
-      mockScannerApiClient.enrollRepo.mockRejectedValue(new Error('scanner unreachable'));
+    it('should return 500 and roll back the subscription if scanner tracking fails', async () => {
+      mockScannerApiClient.trackRepo.mockRejectedValue(new Error('scanner unreachable'));
 
       const res = await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
@@ -216,13 +216,13 @@ describe('Subscription API (integration)', () => {
       expect(reposInDb).toHaveLength(0);
     });
 
-    it('should still remove the subscription even if scanner unenrollment fails', async () => {
+    it('should still remove the subscription even if scanner untracking fails', async () => {
       await authed(request(server).post('/notifier/subscribe'))
         .send({ email: 'test@gmail.com', repo: 'owner/repo' });
       const [sub] = await db.select().from(subscriptions);
       await request(server).get(`/notifier/confirm/${sub.token}`);
 
-      mockScannerApiClient.unenrollRepo.mockRejectedValue(new Error('scanner unreachable'));
+      mockScannerApiClient.untrackRepo.mockRejectedValue(new Error('scanner unreachable'));
 
       const res = await request(server).get(`/notifier/unsubscribe/${sub.token}`);
       expect(res.status).toBe(200);

@@ -17,8 +17,8 @@ export class TrackedRepoRepository implements ITrackedRepoRepository {
       .where(eq(trackedRepos.id, repoId));
   }
 
-  async enroll(id: string, repo: string, lastSeenTag: string): Promise<TrackedRepository> {
-    const [enrolled] = await scannerDb
+  async track(id: string, repo: string, lastSeenTag: string): Promise<TrackedRepository> {
+    const [tracked] = await scannerDb
       .insert(trackedRepos)
       .values({ id, repo, last_seen_tag: lastSeenTag })
       .onConflictDoUpdate({
@@ -27,10 +27,10 @@ export class TrackedRepoRepository implements ITrackedRepoRepository {
       })
       .returning();
 
-    return enrolled;
+    return tracked;
   }
 
-  async unenroll(repoId: string): Promise<void> {
+  async untrack(repoId: string): Promise<void> {
     await scannerDb.delete(trackedRepos).where(eq(trackedRepos.id, repoId));
   }
 }

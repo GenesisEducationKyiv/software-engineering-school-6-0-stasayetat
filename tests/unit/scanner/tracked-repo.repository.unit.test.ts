@@ -13,7 +13,7 @@ vi.mock('@scanner/db', () => ({
 }));
 
 describe('TrackedRepoRepository', () => {
-  it('enroll upserts on conflicting id', async () => {
+  it('track upserts on conflicting id', async () => {
     const repository = new TrackedRepoRepository();
     const onConflictDoUpdate = vi.fn().mockReturnValue({
       returning: vi.fn().mockResolvedValue([{ id: 'repo-1', repo: 'owner/repo', last_seen_tag: 'v1', checkedAt: new Date() }]),
@@ -21,7 +21,7 @@ describe('TrackedRepoRepository', () => {
     const values = vi.fn().mockReturnValue({ onConflictDoUpdate });
     vi.mocked(scannerDb.insert).mockReturnValue({ values } as any);
 
-    const result = await repository.enroll('repo-1', 'owner/repo', 'v1');
+    const result = await repository.track('repo-1', 'owner/repo', 'v1');
 
     expect(values).toHaveBeenCalledWith({ id: 'repo-1', repo: 'owner/repo', last_seen_tag: 'v1' });
     expect(result.id).toBe('repo-1');

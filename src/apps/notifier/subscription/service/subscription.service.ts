@@ -38,15 +38,19 @@ export class SubscriptionService {
         return validatedEither;
       }
 
-      let sagaResult: { subscription: Subscription };
+      return await this.subscribeRepoWithEmailConfirmation(email, repo, validatedEither);
+    } finally {
+      end();
+    }
+  }
 
-      try {
-        sagaResult = await this.subscriptionSagaService.subscribeNewRepo(email, repo, validatedEither.value);
-      } catch (error) {
-        logger.error(`Failed to enroll ${repo} in scanner: ${getErrorMessage(error)}`);
-
-        return E.left({ code: DomainErrorCode.SCANNER_ENROLLMENT_FAILED, message: getErrorMessage(error) });
-      }
+  private async subscribeRepoWithEmailConfirmation(
+    email: string,
+    repo: string,
+    validatedEither: E.Right<string>,
+  ): Promise<E.Either<DomainError, void>> {
+    try {
+      const sagaResult = await this.subscriptionSagaService.subscribeNewRepo(email, repo, validatedEither.value);
 
       const responseEither = await this.sendConfirmationOrFail(email, sagaResult.subscription.token, repo);
 
@@ -59,8 +63,10 @@ export class SubscriptionService {
       subscriptionsTotal.inc({ status: 'sent' });
 
       return responseEither;
-    } finally {
-      end();
+    } catch (error) {
+      logger.error(`Failed to track ${repo} in scanner: ${getErrorMessage(error)}`);
+
+      return E.left({ code: DomainErrorCode.SCANNER_TRACKING_FAILED, message: getErrorMessage(error) });
     }
   }
 
@@ -112,10 +118,10 @@ export class SubscriptionService {
 
         if (orphanedRepo) {
           try {
-            await this.subscriptionSagaService.unenrollOrphanedRepo(orphanedRepo);
+            await this.subscriptionSagaService.untrackOrphanedRepo(orphanedRepo);
           } catch (error) {
             logger.error(
-              `Failed to unenroll orphaned repo ${orphanedRepo.repo} from scanner: ${getErrorMessage(error)}`,
+              `Failed to untrack orphaned repo ${orphanedRepo.repo} from scanner: ${getErrorMessage(error)}`,
             );
           }
         }

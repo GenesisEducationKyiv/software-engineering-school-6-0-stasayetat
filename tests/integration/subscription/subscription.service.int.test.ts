@@ -38,8 +38,8 @@ describe('SubscriptionService (integration)', () => {
     };
 
     const mockScannerApiClient: IScannerApiClient = {
-      enrollRepo: vi.fn().mockResolvedValue(undefined),
-      unenrollRepo: vi.fn().mockResolvedValue(undefined),
+      trackRepo: vi.fn().mockResolvedValue(undefined),
+      untrackRepo: vi.fn().mockResolvedValue(undefined),
     };
 
     const subscriptionRepository = new SubscriptionRepository();

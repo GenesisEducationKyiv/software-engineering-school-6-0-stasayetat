@@ -2,12 +2,13 @@ import {
   ISubscriptionRepository,
   SUBSCRIPTION_REPOSITORY,
 } from '@notifier/subscription/repository/subscription.repository.interface';
+import { SagaStep } from '@notifier/subscription/saga/saga.types';
 import { RepoService } from '@notifier/subscription/service/repo.service';
 import { Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
 import { inject, injectable } from 'tsyringe';
 
-import { SagaRunner, SagaStep } from './saga-runner';
+import { SagaRunner } from './saga-runner';
 import { IScannerApiClient, SCANNER_API_CLIENT } from './scanner-api.client.interface';
 
 type SubscribeCtx = { repo?: Repository; subscription?: Subscription };
@@ -35,24 +36,24 @@ export class SubscriptionSagaService {
           context.repo = await this.repoService.createRepoRecord(repo, lastSeenTag);
           context.subscription = await this.subscriptionRepository.createNewSubscription(email, context.repo.id);
         },
-        undo: async c => {
-          if (c.subscription) {
-            await this.subscriptionRepository.removeSubscription(c.subscription);
+        undo: async context => {
+          if (context.subscription) {
+            await this.subscriptionRepository.removeSubscription(context.subscription);
           }
 
-          if (c.repo) {
-            await this.repoService.deleteRepoRecord(c.repo.id);
+          if (context.repo) {
+            await this.repoService.deleteRepoRecord(context.repo.id);
           }
         },
       },
       {
-        name: 'enrollRepoInScanner',
-        run: async c => {
-          await this.scannerApiClient.enrollRepo(c.repo!.id, c.repo!.repo, c.repo!.last_seen_tag);
+        name: 'trackRepoInScanner',
+        run: async context => {
+          await this.scannerApiClient.trackRepo(context.repo!.id, context.repo!.repo, context.repo!.last_seen_tag);
         },
-        undo: async c => {
-          if (c.repo) {
-            await this.scannerApiClient.unenrollRepo(c.repo.id);
+        undo: async context => {
+          if (context.repo) {
+            await this.scannerApiClient.untrackRepo(context.repo.id);
           }
         },
       },
@@ -63,15 +64,15 @@ export class SubscriptionSagaService {
     return { repo: ctx.repo!, subscription: ctx.subscription! };
   }
 
-  async unenrollOrphanedRepo(repo: Repository): Promise<void> {
+  async untrackOrphanedRepo(repo: Repository): Promise<void> {
     const steps: SagaStep<object>[] = [
       {
-        name: 'unenrollRepoInScanner',
+        name: 'untrackRepoInScanner',
         run: async () => {
-          await this.scannerApiClient.unenrollRepo(repo.id);
+          await this.scannerApiClient.untrackRepo(repo.id);
         },
         undo: async () => {
-          await this.scannerApiClient.enrollRepo(repo.id, repo.repo, repo.last_seen_tag);
+          await this.scannerApiClient.trackRepo(repo.id, repo.repo, repo.last_seen_tag);
         },
       },
       {

@@ -36,7 +36,7 @@ describe('SubscriptionService', () => {
     subscriptionRepository = new SubscriptionRepository() as MockedObject<SubscriptionRepository>;
     repoService = new RepoService({} as any, {} as any) as MockedObject<RepoService>;
     notificationEmailService = new NotificationEmailService({} as any) as MockedObject<NotificationEmailService>;
-    subscriptionSagaService = { subscribeNewRepo: vi.fn(), unenrollOrphanedRepo: vi.fn() } as unknown as MockedObject<SubscriptionSagaService>;
+    subscriptionSagaService = { subscribeNewRepo: vi.fn(), untrackOrphanedRepo: vi.fn() } as unknown as MockedObject<SubscriptionSagaService>;
 
     vi.spyOn(subscriptionRepository, 'getSubscriptionByEmailAndRepoId').mockResolvedValue(null);
     vi.spyOn(subscriptionRepository, 'createNewSubscription').mockResolvedValue(mockSubscription);
@@ -54,7 +54,7 @@ describe('SubscriptionService', () => {
     vi.spyOn(notificationEmailService, 'sendReleaseNotification').mockResolvedValue(undefined);
 
     vi.mocked(subscriptionSagaService.subscribeNewRepo).mockResolvedValue({ repo: mockRepo, subscription: mockSubscription });
-    vi.mocked(subscriptionSagaService.unenrollOrphanedRepo).mockResolvedValue(undefined);
+    vi.mocked(subscriptionSagaService.untrackOrphanedRepo).mockResolvedValue(undefined);
 
     service = new SubscriptionService(subscriptionRepository, notificationEmailService, repoService, subscriptionSagaService);
   });
@@ -114,7 +114,7 @@ describe('SubscriptionService', () => {
       }
     });
 
-    it('should return SCANNER_ENROLLMENT_FAILED if the saga throws', async () => {
+    it('should return SCANNER_TRACKING_FAILED if the saga throws', async () => {
       repoService.findRepo.mockResolvedValue(null);
       subscriptionSagaService.subscribeNewRepo.mockRejectedValue(new Error('scanner unreachable'));
 
@@ -123,7 +123,7 @@ describe('SubscriptionService', () => {
       expect(E.isLeft(result)).toBe(true);
 
       if (E.isLeft(result)) {
-        expect(result.value.code).toBe(DomainErrorCode.SCANNER_ENROLLMENT_FAILED);
+        expect(result.value.code).toBe(DomainErrorCode.SCANNER_TRACKING_FAILED);
         expect(notificationEmailService.sendConfirmationEmail).not.toHaveBeenCalled();
       }
     });
@@ -185,28 +185,28 @@ describe('SubscriptionService', () => {
       expect(subscriptionRepository.removeSubscription).toHaveBeenCalledWith(mockSubscription);
     });
 
-    it('should run the unenroll saga if no subscriptions are left for the repo', async () => {
+    it('should run the untrack saga if no subscriptions are left for the repo', async () => {
       subscriptionRepository.getSubscriptionByToken.mockResolvedValue(mockSubscription);
       subscriptionRepository.countByRepoId.mockResolvedValue(0);
 
       await service.confirmUnsubscribe('token-uuid');
 
-      expect(subscriptionSagaService.unenrollOrphanedRepo).toHaveBeenCalledWith(mockRepo);
+      expect(subscriptionSagaService.untrackOrphanedRepo).toHaveBeenCalledWith(mockRepo);
     });
 
-    it('should not run the unenroll saga if other subscriptions exist', async () => {
+    it('should not run the untrack saga if other subscriptions exist', async () => {
       subscriptionRepository.getSubscriptionByToken.mockResolvedValue(mockSubscription);
       subscriptionRepository.countByRepoId.mockResolvedValue(1);
 
       await service.confirmUnsubscribe('token-uuid');
 
-      expect(subscriptionSagaService.unenrollOrphanedRepo).not.toHaveBeenCalled();
+      expect(subscriptionSagaService.untrackOrphanedRepo).not.toHaveBeenCalled();
     });
 
-    it('should still return success if the unenroll saga throws', async () => {
+    it('should still return success if the untrack saga throws', async () => {
       subscriptionRepository.getSubscriptionByToken.mockResolvedValue(mockSubscription);
       subscriptionRepository.countByRepoId.mockResolvedValue(0);
-      subscriptionSagaService.unenrollOrphanedRepo.mockRejectedValue(new Error('scanner unreachable'));
+      subscriptionSagaService.untrackOrphanedRepo.mockRejectedValue(new Error('scanner unreachable'));
 
       const result = await service.confirmUnsubscribe('token-uuid');
 

@@ -1,14 +1,9 @@
+import { SagaStep } from '@notifier/subscription/saga/saga.types';
 import { Saga, SagaType } from '@shared/types';
 import { getErrorMessage } from '@shared/utils';
 import { inject, injectable } from 'tsyringe';
 
 import { ISagaRepository, SAGA_REPOSITORY } from './saga.repository.interface';
-
-export type SagaStep<Ctx> = {
-  name: string;
-  run: (ctx: Ctx) => Promise<void>;
-  undo: (ctx: Ctx) => Promise<void>;
-};
 
 @injectable()
 export class SagaRunner {
