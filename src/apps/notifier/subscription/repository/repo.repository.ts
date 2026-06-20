@@ -30,7 +30,9 @@ export class RepoRepository implements IRepoRepository {
   }
 
   async recreateRepo(repo: Repository): Promise<void> {
-    await db.insert(repos).values({ id: repo.id, repo: repo.repo, last_seen_tag: repo.last_seen_tag, checkedAt: repo.checkedAt });
+    await db
+      .insert(repos)
+      .values({ id: repo.id, repo: repo.repo, last_seen_tag: repo.last_seen_tag, checkedAt: repo.checkedAt });
   }
 
   getAllRepos(): Promise<Repository[]> {

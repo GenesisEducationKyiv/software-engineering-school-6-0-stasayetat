@@ -4,9 +4,11 @@ import { activeSubscriptionCount, subscriptionOperationDuration, subscriptionsTo
 import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
 import { DomainError, DomainErrorCode, MinifiedSubscription, Subscription } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
+import { getErrorMessage } from '@shared/utils';
 import { inject, injectable } from 'tsyringe';
 
 import { ISubscriptionRepository, SUBSCRIPTION_REPOSITORY } from '../repository/subscription.repository.interface';
+import { SubscriptionSagaService } from '../saga/subscription-saga.service';
 import { RepoService } from './repo.service';
 
 @injectable()
@@ -15,19 +17,48 @@ export class SubscriptionService {
     @inject(SUBSCRIPTION_REPOSITORY) private readonly subscriptionRepository: ISubscriptionRepository,
     @inject(NOTIFICATION_SERVICE) private readonly notificationService: NotificationService,
     private readonly repoService: RepoService,
+    private readonly subscriptionSagaService: SubscriptionSagaService,
   ) {}
 
   async subscribe(email: string, repo: string): Promise<E.Either<DomainError, void>> {
     const end = subscriptionOperationDuration.startTimer({ type: 'subscribe' });
 
     try {
-      const foundRepo = await this.repoService.findOrCreateRepo(repo);
+      const existingRepo = await this.repoService.findRepo(repo);
 
-      if (E.isLeft(foundRepo)) {
-        return foundRepo;
+      if (existingRepo) {
+        return await this.subscribeToExistingRepo(email, existingRepo);
       }
 
-      return await this.subscribeToExistingRepo(email, foundRepo.value);
+      const validatedEither = await this.repoService.validateNewRepo(repo);
+
+      if (E.isLeft(validatedEither)) {
+        logger.info(`Something went wrong. Message: ${JSON.stringify(validatedEither.value.message)}`);
+
+        return validatedEither;
+      }
+
+      let sagaResult: { subscription: Subscription };
+
+      try {
+        sagaResult = await this.subscriptionSagaService.subscribeNewRepo(email, repo, validatedEither.value);
+      } catch (error) {
+        logger.error(`Failed to enroll ${repo} in scanner: ${getErrorMessage(error)}`);
+
+        return E.left({ code: DomainErrorCode.SCANNER_ENROLLMENT_FAILED, message: getErrorMessage(error) });
+      }
+
+      const responseEither = await this.sendConfirmationOrFail(email, sagaResult.subscription.token, repo);
+
+      if (E.isLeft(responseEither)) {
+        return responseEither;
+      }
+
+      logger.info(`Email for ${repo} successfully sent to ${email}`);
+
+      subscriptionsTotal.inc({ status: 'sent' });
+
+      return responseEither;
     } finally {
       end();
     }
@@ -77,7 +108,17 @@ export class SubscriptionService {
       const subscriptionsCount = await this.subscriptionRepository.countByRepoId(repoId);
 
       if (!subscriptionsCount) {
-        await this.repoService.removeRepo(repoId);
+        const orphanedRepo = await this.repoService.getRepoById(repoId);
+
+        if (orphanedRepo) {
+          try {
+            await this.subscriptionSagaService.unenrollOrphanedRepo(orphanedRepo);
+          } catch (error) {
+            logger.error(
+              `Failed to unenroll orphaned repo ${orphanedRepo.repo} from scanner: ${getErrorMessage(error)}`,
+            );
+          }
+        }
       }
 
       logger.info(`Subscription removed successfully`);
