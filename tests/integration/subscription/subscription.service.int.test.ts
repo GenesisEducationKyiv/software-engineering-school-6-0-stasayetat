@@ -1,5 +1,9 @@
 import { RepoRepository } from '@notifier/subscription/repository/repo.repository';
 import { SubscriptionRepository } from '@notifier/subscription/repository/subscription.repository';
+import { SagaRepository } from '@notifier/subscription/saga/saga.repository';
+import { SagaRunner } from '@notifier/subscription/saga/saga-runner';
+import { IScannerApiClient } from '@notifier/subscription/saga/scanner-api.client.interface';
+import { SubscriptionSagaService } from '@notifier/subscription/saga/subscription-saga.service';
 import { RepoService } from '@notifier/subscription/service/repo.service';
 import { SubscriptionService } from '@notifier/subscription/service/subscription.service';
 import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
@@ -33,10 +37,26 @@ describe('SubscriptionService (integration)', () => {
       sendReleaseNotification: vi.fn().mockResolvedValue(undefined),
     };
 
+    const mockScannerApiClient: IScannerApiClient = {
+      enrollRepo: vi.fn().mockResolvedValue(undefined),
+      unenrollRepo: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const subscriptionRepository = new SubscriptionRepository();
+    const repoService = new RepoService(new RepoRepository(), mockTagFetcher);
+    const sagaRunner = new SagaRunner(new SagaRepository());
+    const subscriptionSagaService = new SubscriptionSagaService(
+      sagaRunner,
+      repoService,
+      subscriptionRepository,
+      mockScannerApiClient,
+    );
+
     service = new SubscriptionService(
-      new SubscriptionRepository(),
+      subscriptionRepository,
       mockEmailService as any,
-      new RepoService(new RepoRepository(), mockTagFetcher),
+      repoService,
+      subscriptionSagaService,
     );
   });
 

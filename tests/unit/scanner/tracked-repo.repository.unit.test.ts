@@ -1,5 +1,5 @@
-import { TrackedRepoRepository } from '@scanner/repository/tracked-repo.repository';
 import { scannerDb } from '@scanner/db';
+import { TrackedRepoRepository } from '@scanner/repository/tracked-repo.repository';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@scanner/db', () => ({
