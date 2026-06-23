@@ -1,0 +1,8 @@
+version: v2
+plugins:
+  - local: ../../../../node_modules/.bin/protoc-gen-ts_proto
+    out: proto-types
+    opt:
+      - outputServices=grpc-js
+      - useExactTypes=false
+      - esModuleInterop=true

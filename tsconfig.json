@@ -31,6 +31,7 @@
   },
   "include": [
     "src/**/*.ts",
+    "scripts/**/*.ts",
     "tests/**/*.ts",
     "vitest.unit.config.ts",
     "vitest.int.config.ts",

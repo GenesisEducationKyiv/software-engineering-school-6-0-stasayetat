@@ -93,3 +93,17 @@ Prometheus metrics available at `GET /metrics`.
 | `github_api_requests_total` | Counter | GitHub API calls by status (`success`, `rate_limited`, `error`) |
 | `github_api_request_duration_seconds` | Histogram | GitHub API response time |
 | `scanner_run_duration_seconds` | Histogram | Full scanner job duration |
+
+## REST vs gRPC Benchmark
+
+Implementations were benchmarked with 50 concurrent connection for 20 seconds
+
+| Metric                                | REST          | gRPC        |
+|---------------------------------------|---------------|-------------|
+| `Throughput`                          | 2 795 req/sec | 3 828 req/s |
+| `Average Latency`                     | 17.42 ms      | 12.98 ms    |
+| `P50 Latency`                         | 16 ms         | 12.31 ms    |
+| `P99 Latency`                         | 42 ms         | 26.61 ms    |
+| `Max Latency`                         | 543 ms        | 77 ms       |
+
+gRPC showed about 37% better throughput and 25% lower latency. Because of HTTP2(reusing a single TCP connection instead of opening many), binary serialization(faster to encode/decode than JSON)

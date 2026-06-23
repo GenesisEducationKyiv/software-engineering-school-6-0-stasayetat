@@ -30,7 +30,9 @@ export class TrackedRepoRepository implements ITrackedRepoRepository {
     return tracked;
   }
 
-  async untrack(repoId: string): Promise<void> {
-    await scannerDb.delete(trackedRepos).where(eq(trackedRepos.id, repoId));
+  async untrack(repoId: string): Promise<boolean> {
+    const deleted = await scannerDb.delete(trackedRepos).where(eq(trackedRepos.id, repoId)).returning();
+
+    return deleted.length > 0;
   }
 }

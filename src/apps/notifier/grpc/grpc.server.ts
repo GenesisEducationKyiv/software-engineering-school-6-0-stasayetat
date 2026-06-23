@@ -3,14 +3,14 @@ import * as protoLoader from '@grpc/proto-loader';
 import { ConfirmDto, GetSubscriptionsDto, SubscribeDto, UnsubscribeDto } from '@notifier/dtos';
 import { SubscriptionService } from '@notifier/subscription';
 import { E } from '@shared/either';
+import { authInterceptor } from '@shared/grpc/auth.interceptor';
+import { validateGrpc } from '@shared/grpc/validate-grpc';
 import { logger } from '@shared/logger';
 import { DomainError, MinifiedSubscription } from '@shared/types';
 import path from 'path';
 import { container } from 'tsyringe';
 
 import { toGrpcError } from './grpc.utils';
-import { authInterceptor } from './interceptors/auth.interceptor';
-import { validateGrpc } from './interceptors/validate-grpc';
 import { ProtoGrpcType } from './proto-types/subscription';
 
 const PROTO_PATH = path.resolve(__dirname, './subscription.proto');
@@ -97,30 +97,32 @@ async function getSubscriptions(
   callback(null, result.value);
 }
 
+const subscriptionServiceImpl = {
+  subscribe: (call: grpc.ServerUnaryCall<SubscribeDto, DomainError>, callback: grpc.sendUnaryData<string>) =>
+    void subscribe(call, callback),
+
+  confirm: (call: grpc.ServerUnaryCall<ConfirmDto, DomainError>, callback: grpc.sendUnaryData<string>) =>
+    void confirm(call, callback),
+
+  unsubscribe: (call: grpc.ServerUnaryCall<UnsubscribeDto, DomainError>, callback: grpc.sendUnaryData<string>) =>
+    void unsubscribe(call, callback),
+
+  getSubscriptions: (
+    call: grpc.ServerUnaryCall<GetSubscriptionsDto, MinifiedSubscription[]>,
+    callback: grpc.sendUnaryData<MinifiedSubscription[]>,
+  ) => void getSubscriptions(call, callback),
+};
+
 export function startGrpcServer(port: number) {
   const server = new grpc.Server({
     interceptors: [authInterceptor],
   });
 
-  server.addService(proto.subscription.SubscriptionService.service, {
-    subscribe: (call: grpc.ServerUnaryCall<SubscribeDto, DomainError>, callback: grpc.sendUnaryData<string>) =>
-      void subscribe(call, callback),
+  server.addService(proto.subscription.SubscriptionService.service, subscriptionServiceImpl);
 
-    confirm: (call: grpc.ServerUnaryCall<ConfirmDto, DomainError>, callback: grpc.sendUnaryData<string>) =>
-      void confirm(call, callback),
-
-    unsubscribe: (call: grpc.ServerUnaryCall<UnsubscribeDto, DomainError>, callback: grpc.sendUnaryData<string>) =>
-      void unsubscribe(call, callback),
-
-    getSubscriptions: (
-      call: grpc.ServerUnaryCall<GetSubscriptionsDto, MinifiedSubscription[]>,
-      callback: grpc.sendUnaryData<MinifiedSubscription[]>,
-    ) => void getSubscriptions(call, callback),
-  });
-
-  server.bindAsync(`0.0.0.0:${port}`, grpc.ServerCredentials.createInsecure(), (err, boundPort) => {
-    if (err) {
-      logger.error(`gRPC server error: ${err.message}`);
+  server.bindAsync(`0.0.0.0:${port}`, grpc.ServerCredentials.createInsecure(), (error, boundPort) => {
+    if (error) {
+      logger.error(`gRPC server error: ${error.message}`);
 
       return;
     }

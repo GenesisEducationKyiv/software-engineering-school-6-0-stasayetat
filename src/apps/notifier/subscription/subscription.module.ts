@@ -7,8 +7,8 @@ import { SUBSCRIPTION_REPOSITORY } from './repository/subscription.repository.in
 import { SagaRepository } from './saga/saga.repository';
 import { SAGA_REPOSITORY } from './saga/saga.repository.interface';
 import { SagaRunner } from './saga/saga-runner';
-import { ScannerApiClient } from './saga/scanner-api.client';
 import { SCANNER_API_CLIENT } from './saga/scanner-api.client.interface';
+import { ScannerGrpcClient } from './saga/scanner-grpc.client';
 import { SubscriptionSagaService } from './saga/subscription-saga.service';
 import { ReleaseNotificationService } from './service/release-notification.service';
 import { RepoService } from './service/repo.service';
@@ -19,7 +19,8 @@ export function registerSubscriptionModule(container: DependencyContainer): void
   container.registerSingleton(SUBSCRIPTION_REPOSITORY, SubscriptionRepository);
   container.registerSingleton(SAGA_REPOSITORY, SagaRepository);
   container.registerSingleton(SagaRunner);
-  container.registerSingleton(SCANNER_API_CLIENT, ScannerApiClient);
+  container.registerSingleton(ScannerGrpcClient);
+  container.registerSingleton(SCANNER_API_CLIENT, ScannerGrpcClient);
   container.registerSingleton(SubscriptionSagaService);
   container.registerSingleton(RepoService);
   container.registerSingleton(SubscriptionService);

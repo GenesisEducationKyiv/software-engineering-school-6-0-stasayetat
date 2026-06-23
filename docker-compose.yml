@@ -105,6 +105,8 @@ services:
       POSTGRES_URL: postgresql://postgres:postgrespassword@postgres:5432/github_notifier
       REDIS_URL: redis://redis:6379
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      SCANNER_API_URL: http://scanner:8082
+      SCANNER_GRPC_URL: scanner:50052
     ports:
       - "8081:8081"
     command: sh -c "node .build/shared/db/migrate.js && node .build/apps/notifier/main.js"
@@ -129,8 +131,10 @@ services:
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       SCANNER_POSTGRES_URL: postgresql://postgres:postgrespassword@scanner-postgres:5432/scanner
       SCANNER_API_URL: http://scanner:8082
+      SCANNER_GRPC_PORT: 50052
     ports:
       - "8082:8082"
+      - "50052:50052"
     command: sh -c "node .build/apps/scanner/db/migrate.js && node .build/apps/scanner/main.js"
 
 volumes:

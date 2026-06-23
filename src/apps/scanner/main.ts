@@ -8,6 +8,7 @@ import { RabbitMQClient } from '@shared/rabbitmq';
 import cron from 'node-cron';
 import { container } from 'tsyringe';
 
+import { startGrpcServer } from './grpc/grpc.server';
 import { server } from './server';
 
 process.on('unhandledRejection', reason => {
@@ -34,6 +35,8 @@ async function bootstrap() {
       logger.info('Scanner server started on port: ' + env.SCANNER_PORT);
     }
   });
+
+  startGrpcServer(env.SCANNER_GRPC_PORT);
 
   const task = cron.schedule('*/30 * * * *', async () => {
     await scanner.run();
