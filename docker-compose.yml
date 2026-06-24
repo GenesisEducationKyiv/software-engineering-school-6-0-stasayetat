@@ -22,6 +22,17 @@ services:
     ports:
       - "6379:6379"
 
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.4.1
     environment:
@@ -49,7 +60,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     depends_on:
-      - app
+      - notifier
 
   grafana:
     image: grafana/grafana:latest
@@ -69,14 +80,19 @@ services:
   notifier:
     build: .
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     env_file:
       - ./profiles/.env.production
     environment:
       NODE_ENV: production
       POSTGRES_URL: postgresql://postgres:postgrespassword@postgres:5432/github_notifier
       REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     ports:
       - "8081:8081"
     command: sh -c "node .build/shared/db/migrate.js && node .build/apps/notifier/main.js"
@@ -84,14 +100,19 @@ services:
   scanner:
     build: .
     depends_on:
-      - redis
-      - notifier
+      redis:
+        condition: service_started
+      notifier:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     env_file:
       - ./profiles/.env.production
     environment:
       NODE_ENV: production
       REDIS_URL: redis://redis:6379
       NOTIFIER_API_URL: http://notifier:8081
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     command: node .build/apps/scanner/main.js
 
 volumes:

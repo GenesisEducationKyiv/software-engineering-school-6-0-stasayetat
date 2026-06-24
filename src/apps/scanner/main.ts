@@ -4,6 +4,7 @@ import './container';
 import { ScannerService } from '@scanner/service/scanner.service';
 import { env } from '@shared/env';
 import { logger } from '@shared/logger';
+import { RabbitMQClient } from '@shared/rabbitmq';
 import cron from 'node-cron';
 import { container } from 'tsyringe';
 
@@ -15,8 +16,12 @@ process.on('uncaughtException', error => {
   logger.error(`Uncaught exception: ${error.message}`);
 });
 
-function bootstrap() {
+async function bootstrap() {
   logger.info(`Scanner service starting. API target: ${env.NOTIFIER_API_URL}`);
+
+  const rabbitMQClient = container.resolve(RabbitMQClient);
+  await rabbitMQClient.connect();
+  logger.info('RabbitMQ connected');
 
   const scanner = container.resolve(ScannerService);
 
