@@ -8,6 +8,8 @@ import { RabbitMQClient } from '@shared/rabbitmq';
 import cron from 'node-cron';
 import { container } from 'tsyringe';
 
+import { server } from './server';
+
 process.on('unhandledRejection', reason => {
   logger.error(`Unhandled rejection: ${String(reason)}`);
 });
@@ -24,6 +26,14 @@ async function bootstrap() {
   logger.info('RabbitMQ connected');
 
   const scanner = container.resolve(ScannerService);
+
+  server.listen(env.SCANNER_PORT, err => {
+    if (err) {
+      logger.error(err.message);
+    } else {
+      logger.info('Scanner server started on port: ' + env.SCANNER_PORT);
+    }
+  });
 
   const task = cron.schedule('*/30 * * * *', async () => {
     await scanner.run();

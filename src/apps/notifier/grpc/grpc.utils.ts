@@ -9,6 +9,7 @@ export const domainErrorToGrpcStatusMap: Record<DomainErrorCode, status> = {
   [DomainErrorCode.GITHUB_RATE_LIMIT]: status.RESOURCE_EXHAUSTED,
   [DomainErrorCode.GITHUB_REPO_NOT_FOUND]: status.NOT_FOUND,
   [DomainErrorCode.GITHUB_API_ERROR]: status.INTERNAL,
+  [DomainErrorCode.SCANNER_TRACKING_FAILED]: status.INTERNAL,
 };
 
 export function toGrpcError(err: DomainError): Partial<StatusObject> {

@@ -1,3 +1,5 @@
+import { TrackedRepoRepository } from '@scanner/repository/tracked-repo.repository';
+import { TRACKED_REPO_REPOSITORY } from '@scanner/repository/tracked-repo.repository.interface';
 import { RepoTagFetcher } from '@scanner/service/repo-tag.fetcher';
 import { ScannerDataFetcher } from '@scanner/service/scanner.data-fetcher';
 import { ScannerService } from '@scanner/service/scanner.service';
@@ -11,3 +13,4 @@ registerGithubModule(container);
 container.registerSingleton(ScannerDataFetcher);
 container.registerSingleton(RepoTagFetcher);
 container.registerSingleton(ScannerService);
+container.registerSingleton(TRACKED_REPO_REPOSITORY, TrackedRepoRepository);

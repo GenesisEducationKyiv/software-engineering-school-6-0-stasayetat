@@ -35,7 +35,8 @@
     "vitest.unit.config.ts",
     "vitest.int.config.ts",
     "eslint.config.ts",
-    "drizzle.config.ts"
+    "drizzle.config.ts",
+    "drizzle.config.scanner.ts"
   ],
   "exclude": [".build"],
 }

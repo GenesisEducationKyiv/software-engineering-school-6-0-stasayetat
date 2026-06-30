@@ -1,6 +1,6 @@
 import { ConfirmDto, GetSubscriptionsDto, SubscribeDto, UnsubscribeDto } from '@notifier/dtos';
-import { validateBody, validateParams, validateQuery } from '@notifier/middlewares';
-import { apiKeyMiddleware } from '@notifier/middlewares/api-key.middleware';
+import { apiKeyMiddleware } from '@shared/middlewares/api-key.middleware';
+import { validateBody, validateParams, validateQuery } from '@shared/middlewares/validation.middleware';
 import { unpackOrThrowException } from '@shared/utils';
 import { Request, Response, Router } from 'express';
 import { container } from 'tsyringe';
