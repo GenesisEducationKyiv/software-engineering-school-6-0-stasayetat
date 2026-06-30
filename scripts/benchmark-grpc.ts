@@ -1,8 +1,13 @@
 import { env } from '@shared/env';
 import { spawnSync } from 'child_process';
 import { randomUUID } from 'crypto';
+import { like } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import fs from 'fs';
 import path from 'path';
+import postgres from 'postgres';
+
+import { trackedRepos } from '../src/apps/scanner/db/schema';
 
 const protoPath = path.resolve(__dirname, '../src/apps/scanner/grpc/tracked_repo.proto');
 
@@ -43,3 +48,10 @@ if (result.error) {
   console.error('ghz is required on PATH. Install: https://github.com/bojand/ghz/releases');
   process.exitCode = 1;
 }
+
+void (async () => {
+  const client = postgres(env.SCANNER_POSTGRES_URL);
+  const db = drizzle(client);
+  await db.delete(trackedRepos).where(like(trackedRepos.repo, 'bench/%'));
+  await client.end();
+})();

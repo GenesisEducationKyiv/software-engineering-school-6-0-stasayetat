@@ -19,7 +19,6 @@ export function registerSubscriptionModule(container: DependencyContainer): void
   container.registerSingleton(SUBSCRIPTION_REPOSITORY, SubscriptionRepository);
   container.registerSingleton(SAGA_REPOSITORY, SagaRepository);
   container.registerSingleton(SagaRunner);
-  container.registerSingleton(ScannerGrpcClient);
   container.registerSingleton(SCANNER_API_CLIENT, ScannerGrpcClient);
   container.registerSingleton(SubscriptionSagaService);
   container.registerSingleton(RepoService);
