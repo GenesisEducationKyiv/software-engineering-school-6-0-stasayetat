@@ -131,7 +131,7 @@ services:
       SCANNER_API_URL: http://scanner:8082
     ports:
       - "8082:8082"
-    command: sh -c "node .build/apps/scanner/db/migrate.js && node .build/apps/scanner/main.js"
+    command: sh -c "npm run migrate:scanner && npm run start:scanner"
 
 volumes:
   postgres_data:

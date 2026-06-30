@@ -18,16 +18,17 @@ describe('scanner internal router', () => {
   });
 
   it('tracks a repo', async () => {
-    const track = vi.fn().mockResolvedValue({ id: 'a', repo: 'owner/repo', last_seen_tag: 'v1', checkedAt: new Date() });
+    const id = '00000000-0000-4000-8000-000000000001';
+    const track = vi.fn().mockResolvedValue({ id, repo: 'owner/repo', last_seen_tag: 'v1', checkedAt: new Date() });
     container.registerInstance(TRACKED_REPO_REPOSITORY, { track, untrack: vi.fn() } as any);
 
     const response = await request(app)
       .post('/internal/repos/track')
       .set('x-api-key', env.APP_API_KEY)
-      .send({ id: 'a', repo: 'owner/repo', lastSeenTag: 'v1' });
+      .send({ id, repo: 'owner/repo', lastSeenTag: 'v1' });
 
     expect(response.status).toBe(201);
-    expect(track).toHaveBeenCalledWith('a', 'owner/repo', 'v1');
+    expect(track).toHaveBeenCalledWith(id, 'owner/repo', 'v1');
   });
 
   it('untracks a repo', async () => {
