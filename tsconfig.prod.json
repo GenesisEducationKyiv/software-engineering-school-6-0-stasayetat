@@ -19,6 +19,8 @@
     "vitest.int.config.ts",
     "vitest.unit.config.ts",
     "drizzle.config.ts",
-    "eslint.config.ts"
+    "drizzle.config.scanner.ts",
+    "eslint.config.ts",
+    "scripts"
   ]
 }

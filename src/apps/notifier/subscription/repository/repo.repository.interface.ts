@@ -7,6 +7,7 @@ export interface IRepoRepository {
   getRepoById(id: string): Promise<Repository | null>;
   createRepo(repo: string, lastSeenTag: string): Promise<Repository>;
   deleteRepo(repoId: string): Promise<void>;
+  recreateRepo(repo: Repository): Promise<void>;
   getAllRepos(): Promise<Repository[]>;
   updateLastSeenTag(repoId: string, tag: string): Promise<void>;
 }

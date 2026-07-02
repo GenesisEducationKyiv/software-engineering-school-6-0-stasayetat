@@ -1,7 +1,7 @@
+import { TrackedRepository } from '@scanner/db';
 import { TagFetcher, TAGS_FETCHER } from '@shared/apis/tags-fetcher.interface';
 import { E } from '@shared/either';
 import { DomainErrorCode } from '@shared/types';
-import { Repository } from '@shared/types/repository.types';
 import Bottleneck from 'bottleneck';
 import ms from 'ms';
 import { inject, injectable } from 'tsyringe';
@@ -19,11 +19,11 @@ export class RepoTagFetcher {
     maxConcurrent: 10,
   });
 
-  getTags(repo: Repository) {
+  getTags(repo: TrackedRepository) {
     return this.scannerLimiter.schedule(() => this.fetchTagsInfo(repo));
   }
 
-  private async fetchTagsInfo(repo: Repository): Promise<E.Either<RepoScanError, RepoScanSuccess>> {
+  private async fetchTagsInfo(repo: TrackedRepository): Promise<E.Either<RepoScanError, RepoScanSuccess>> {
     const tagsResponseEither = await this.tagFetcher.getTags(repo.repo);
 
     if (E.isLeft(tagsResponseEither)) {

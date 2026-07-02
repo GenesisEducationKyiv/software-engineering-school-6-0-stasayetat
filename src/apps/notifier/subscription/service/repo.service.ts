@@ -1,6 +1,5 @@
 import { TagFetcher, TAGS_FETCHER } from '@shared/apis/tags-fetcher.interface';
 import { E } from '@shared/either';
-import { logger } from '@shared/logger';
 import { totalReposCount } from '@shared/metrics';
 import { DomainError, DomainErrorCode } from '@shared/types';
 import { Repository } from '@shared/types/repository.types';
@@ -15,28 +14,18 @@ export class RepoService {
     @inject(TAGS_FETCHER) private readonly repoTagFetcher: TagFetcher,
   ) {}
 
-  async findOrCreateRepo(repo: string): Promise<E.Either<DomainError, Repository>> {
-    const foundRepo = await this.repoRepository.findByRepo(repo);
-
-    if (foundRepo) {
-      return E.right(foundRepo);
-    }
-
-    return await this.createNewRepo(repo);
+  findRepo(repo: string): Promise<Repository | null> {
+    return this.repoRepository.findByRepo(repo);
   }
 
-  async removeRepo(repoId: string) {
-    await this.repoRepository.deleteRepo(repoId);
-
-    totalReposCount.dec();
+  getRepoById(repoId: string): Promise<Repository | null> {
+    return this.repoRepository.getRepoById(repoId);
   }
 
-  private async createNewRepo(repo: string): Promise<E.Either<DomainError, Repository>> {
+  async validateNewRepo(repo: string): Promise<E.Either<DomainError, string>> {
     const tagsResponseEither = await this.repoTagFetcher.getTags(repo);
 
     if (E.isLeft(tagsResponseEither)) {
-      logger.info(`Something went wrong. Message: ${JSON.stringify(tagsResponseEither.value.message)}`);
-
       return tagsResponseEither;
     }
 
@@ -46,10 +35,26 @@ export class RepoService {
       return E.left({ code: DomainErrorCode.REPO_HAS_NO_TAGS, message: 'Repository has no tags' });
     }
 
-    const newRepo = await this.repoRepository.createRepo(repo, tags[0].name);
+    return E.right(tags[0].name);
+  }
+
+  async createRepoRecord(repo: string, lastSeenTag: string): Promise<Repository> {
+    const newRepo = await this.repoRepository.createRepo(repo, lastSeenTag);
 
     totalReposCount.inc();
 
-    return E.right(newRepo);
+    return newRepo;
+  }
+
+  async deleteRepoRecord(repoId: string): Promise<void> {
+    await this.repoRepository.deleteRepo(repoId);
+
+    totalReposCount.dec();
+  }
+
+  async recreateRepoRecord(repo: Repository): Promise<void> {
+    await this.repoRepository.recreateRepo(repo);
+
+    totalReposCount.inc();
   }
 }

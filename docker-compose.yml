@@ -11,6 +11,18 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  scanner-postgres:
+    container_name: github-scanner-postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: scanner
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5433:5432"
+    volumes:
+      - scanner_postgres_data:/var/lib/postgresql/data
+
   mailpit:
     image: axllent/mailpit
     ports:
@@ -21,6 +33,17 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.4.1
@@ -49,7 +72,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
     depends_on:
-      - app
+      - notifier
 
   grafana:
     image: grafana/grafana:latest
@@ -69,14 +92,21 @@ services:
   notifier:
     build: .
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     env_file:
       - ./profiles/.env.production
     environment:
       NODE_ENV: production
       POSTGRES_URL: postgresql://postgres:postgrespassword@postgres:5432/github_notifier
       REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      SCANNER_API_URL: http://scanner:8082
+      SCANNER_GRPC_URL: scanner:50052
     ports:
       - "8081:8081"
     command: sh -c "node .build/shared/db/migrate.js && node .build/apps/notifier/main.js"
@@ -84,17 +114,31 @@ services:
   scanner:
     build: .
     depends_on:
-      - redis
-      - notifier
+      scanner-postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      notifier:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     env_file:
       - ./profiles/.env.production
     environment:
       NODE_ENV: production
       REDIS_URL: redis://redis:6379
       NOTIFIER_API_URL: http://notifier:8081
-    command: node .build/apps/scanner/main.js
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      SCANNER_POSTGRES_URL: postgresql://postgres:postgrespassword@scanner-postgres:5432/scanner
+      SCANNER_API_URL: http://scanner:8082
+      SCANNER_GRPC_PORT: 50052
+    ports:
+      - "8082:8082"
+      - "50052:50052"
+    command: sh -c "node .build/apps/scanner/db/migrate.js && node .build/apps/scanner/main.js"
 
 volumes:
   postgres_data:
+  scanner_postgres_data:
   elasticsearch_data:
   grafana_data:

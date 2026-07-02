@@ -3,14 +3,20 @@ import { RepoRepository } from '@notifier/subscription/repository/repo.repositor
 import { REPO_REPOSITORY } from '@notifier/subscription/repository/repo.repository.interface';
 import { SubscriptionRepository } from '@notifier/subscription/repository/subscription.repository';
 import { SUBSCRIPTION_REPOSITORY } from '@notifier/subscription/repository/subscription.repository.interface';
+import { SagaRepository } from '@notifier/subscription/saga/saga.repository';
+import { SAGA_REPOSITORY } from '@notifier/subscription/saga/saga.repository.interface';
+import { SagaRunner } from '@notifier/subscription/saga/saga-runner';
+import { IScannerApiClient, SCANNER_API_CLIENT } from '@notifier/subscription/saga/scanner-api.client.interface';
+import { SubscriptionSagaService } from '@notifier/subscription/saga/subscription-saga.service';
 import { RepoService } from '@notifier/subscription/service/repo.service';
 import { SubscriptionService } from '@notifier/subscription/service/subscription.service';
 import { TagFetcher, TAGS_FETCHER } from '@shared/apis/tags-fetcher.interface';
-import { db, repos, subscriptions } from '@shared/db';
+import { db, repos, sagas, subscriptions } from '@shared/db';
 import { E } from '@shared/either';
 import { env } from '@shared/env';
 import { NOTIFICATION_SERVICE, NotificationService } from '@shared/notification/notification-service.interface';
 import { DomainErrorCode, TagsResponse } from '@shared/types';
+import { desc } from 'drizzle-orm';
 import request from 'supertest';
 import { container } from 'tsyringe';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -20,11 +26,19 @@ const mockNotificationService = {
   sendConfirmationEmail: vi.fn(),
   sendReleaseNotification: vi.fn(),
 } satisfies NotificationService;
+const mockScannerApiClient = {
+  trackRepo: vi.fn(),
+  untrackRepo: vi.fn(),
+} satisfies IScannerApiClient;
 
 container.register(TAGS_FETCHER, { useValue: mockTagFetcher });
 container.register(NOTIFICATION_SERVICE, { useValue: mockNotificationService });
+container.register(SCANNER_API_CLIENT, { useValue: mockScannerApiClient });
 container.registerSingleton(REPO_REPOSITORY, RepoRepository);
 container.registerSingleton(SUBSCRIPTION_REPOSITORY, SubscriptionRepository);
+container.registerSingleton(SAGA_REPOSITORY, SagaRepository);
+container.registerSingleton(SagaRunner);
+container.registerSingleton(SubscriptionSagaService);
 container.registerSingleton(RepoService);
 container.registerSingleton(SubscriptionService);
 
@@ -35,14 +49,18 @@ describe('Subscription API (integration)', () => {
     vi.clearAllMocks();
     await db.delete(subscriptions);
     await db.delete(repos);
+    await db.delete(sagas);
     mockTagFetcher.getTags.mockResolvedValue(E.right([{ name: 'v1.0.0' }] as TagsResponse));
     mockNotificationService.sendConfirmationEmail.mockResolvedValue(E.right({ success: true }));
     mockNotificationService.sendReleaseNotification.mockResolvedValue(undefined);
+    mockScannerApiClient.trackRepo.mockResolvedValue(undefined);
+    mockScannerApiClient.untrackRepo.mockResolvedValue(undefined);
   });
 
   afterAll(async () => {
     await db.delete(subscriptions);
     await db.delete(repos);
+    await db.delete(sagas);
     await db.$client.end();
     container.reset();
   });
@@ -120,6 +138,23 @@ describe('Subscription API (integration)', () => {
         .send({ email: 'test@gmail.com', repo: 'nonexistent/repo' });
       expect(res.status).toBe(404);
     });
+
+    it('should return 500 and roll back the subscription if scanner tracking fails', async () => {
+      mockScannerApiClient.trackRepo.mockRejectedValue(new Error('scanner unreachable'));
+
+      const res = await authed(request(server).post('/notifier/subscribe'))
+        .send({ email: 'test@gmail.com', repo: 'owner/repo' });
+
+      expect(res.status).toBe(500);
+
+      const subsInDb = await db.select().from(subscriptions);
+      const reposInDb = await db.select().from(repos);
+      expect(subsInDb).toHaveLength(0);
+      expect(reposInDb).toHaveLength(0);
+
+      const [saga] = await db.select().from(sagas);
+      expect(saga.status).toBe('COMPENSATED');
+    });
   });
 
   describe('GET /notifier/confirm/:token', () => {
@@ -179,6 +214,24 @@ describe('Subscription API (integration)', () => {
 
       const reposInDb = await db.select().from(repos);
       expect(reposInDb).toHaveLength(0);
+    });
+
+    it('should still remove the subscription even if scanner untracking fails', async () => {
+      await authed(request(server).post('/notifier/subscribe'))
+        .send({ email: 'test@gmail.com', repo: 'owner/repo' });
+      const [sub] = await db.select().from(subscriptions);
+      await request(server).get(`/notifier/confirm/${sub.token}`);
+
+      mockScannerApiClient.untrackRepo.mockRejectedValue(new Error('scanner unreachable'));
+
+      const res = await request(server).get(`/notifier/unsubscribe/${sub.token}`);
+      expect(res.status).toBe(200);
+
+      const subsInDb = await db.select().from(subscriptions);
+      expect(subsInDb).toHaveLength(0);
+
+      const [saga] = await db.select().from(sagas).orderBy(desc(sagas.createdAt));
+      expect(saga.status).toBe('COMPENSATED');
     });
   });
 

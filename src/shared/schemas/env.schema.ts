@@ -24,4 +24,11 @@ export const EnvironmentSchema = zod.object({
   ELASTICSEARCH_URL: zod.string(),
 
   NOTIFIER_API_URL: zod.string(),
+  SCANNER_API_URL: zod.string(),
+  SCANNER_PORT: zod.coerce.number(),
+  SCANNER_GRPC_URL: zod.string(),
+  SCANNER_GRPC_PORT: zod.coerce.number(),
+  SCANNER_POSTGRES_URL: zod.string(),
+
+  RABBITMQ_URL: zod.string(),
 });

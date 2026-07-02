@@ -1,4 +1,3 @@
-import { internalRouter } from '@notifier/routes/internal.router';
 import { subscriptionRouter } from '@notifier/subscription';
 import { metricsRouter } from '@shared/metrics';
 import { errorHandler } from '@shared/utils';
@@ -21,6 +20,5 @@ server.get('/', (_req, res) => {
 
 server.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 server.use('/notifier', subscriptionRouter);
-server.use('/internal', internalRouter);
 server.use(metricsRouter);
 server.use(errorHandler);

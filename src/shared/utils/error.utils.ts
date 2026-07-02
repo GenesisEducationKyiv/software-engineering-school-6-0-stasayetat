@@ -35,6 +35,7 @@ export const domainErrorToHttpStatusMap: Record<DomainErrorCode, number> = {
   [DomainErrorCode.GITHUB_RATE_LIMIT]: 429,
   [DomainErrorCode.GITHUB_REPO_NOT_FOUND]: 404,
   [DomainErrorCode.GITHUB_API_ERROR]: 500,
+  [DomainErrorCode.SCANNER_TRACKING_FAILED]: 500,
 };
 
 export const unpackOrThrowException = <T>(either: E.Either<DomainError, T>) => {
