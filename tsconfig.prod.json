@@ -1,0 +1,26 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./.build",
+    "sourceMap": false,
+    "incremental": false,
+    "types": [],
+    "paths": {
+      "@shared/*": ["./src/shared/*"],
+      "@notifier/*": ["./src/apps/notifier/*"],
+      "@scanner/*": ["./src/apps/scanner/*"],
+      "@scanner": ["./src/apps/scanner/index"]
+    }
+  },
+  "exclude": [
+    ".build",
+    "tests",
+    "vitest.int.config.ts",
+    "vitest.unit.config.ts",
+    "drizzle.config.ts",
+    "drizzle.config.scanner.ts",
+    "eslint.config.ts",
+    "scripts"
+  ]
+}

@@ -1,0 +1,144 @@
+services:
+  postgres:
+    container_name: github-notifier-postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: github_notifier
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  scanner-postgres:
+    container_name: github-scanner-postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: scanner
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5433:5432"
+    volumes:
+      - scanner_postgres_data:/var/lib/postgresql/data
+
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.1
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.4.1
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - notifier
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_FEATURE_TOGGLES_ENABLE=flameGraph traceqlSearch correlations metricsSummary traceqlEditor
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+
+  notifier:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - ./profiles/.env.production
+    environment:
+      NODE_ENV: production
+      POSTGRES_URL: postgresql://postgres:postgrespassword@postgres:5432/github_notifier
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      SCANNER_API_URL: http://scanner:8082
+      SCANNER_GRPC_URL: scanner:50052
+    ports:
+      - "8081:8081"
+    command: sh -c "node .build/shared/db/migrate.js && node .build/apps/notifier/main.js"
+
+  scanner:
+    build: .
+    depends_on:
+      scanner-postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      notifier:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    env_file:
+      - ./profiles/.env.production
+    environment:
+      NODE_ENV: production
+      REDIS_URL: redis://redis:6379
+      NOTIFIER_API_URL: http://notifier:8081
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      SCANNER_POSTGRES_URL: postgresql://postgres:postgrespassword@scanner-postgres:5432/scanner
+      SCANNER_API_URL: http://scanner:8082
+      SCANNER_GRPC_PORT: 50052
+    ports:
+      - "8082:8082"
+      - "50052:50052"
+    command: sh -c "node .build/apps/scanner/db/migrate.js && node .build/apps/scanner/main.js"
+
+volumes:
+  postgres_data:
+  scanner_postgres_data:
+  elasticsearch_data:
+  grafana_data:

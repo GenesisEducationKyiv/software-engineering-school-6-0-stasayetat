@@ -1,0 +1,226 @@
+import { RepoRepository } from '@notifier/subscription/repository/repo.repository';
+import { SubscriptionRepository } from '@notifier/subscription/repository/subscription.repository';
+import { SagaRepository } from '@notifier/subscription/saga/saga.repository';
+import { SagaRunner } from '@notifier/subscription/saga/saga-runner';
+import { IScannerApiClient } from '@notifier/subscription/saga/scanner-api.client.interface';
+import { SubscriptionSagaService } from '@notifier/subscription/saga/subscription-saga.service';
+import { RepoService } from '@notifier/subscription/service/repo.service';
+import { SubscriptionService } from '@notifier/subscription/service/subscription.service';
+import { TagFetcher } from '@shared/apis/tags-fetcher.interface';
+import { db, repos, subscriptions } from '@shared/db';
+import { E } from '@shared/either';
+import { DomainErrorCode, TagsResponse } from '@shared/types';
+import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+describe('SubscriptionService (integration)', () => {
+  let service: SubscriptionService;
+  let mockTagFetcher: TagFetcher;
+
+  afterAll(async () => {
+    await db.delete(subscriptions);
+    await db.delete(repos);
+    await db.$client.end();
+  });
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+
+    await db.delete(subscriptions);
+    await db.delete(repos);
+
+    mockTagFetcher = {
+      getTags: vi.fn().mockResolvedValue(E.right([{ name: 'v1.0.0' }] as TagsResponse)),
+    };
+
+    const mockEmailService = {
+      sendConfirmationEmail: vi.fn().mockResolvedValue(E.right({ success: true })),
+      sendReleaseNotification: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const mockScannerApiClient: IScannerApiClient = {
+      trackRepo: vi.fn().mockResolvedValue(undefined),
+      untrackRepo: vi.fn().mockResolvedValue(undefined),
+    };
+
+    const subscriptionRepository = new SubscriptionRepository();
+    const repoService = new RepoService(new RepoRepository(), mockTagFetcher);
+    const sagaRunner = new SagaRunner(new SagaRepository());
+    const subscriptionSagaService = new SubscriptionSagaService(
+      sagaRunner,
+      repoService,
+      subscriptionRepository,
+      mockScannerApiClient,
+    );
+
+    service = new SubscriptionService(
+      subscriptionRepository,
+      mockEmailService as any,
+      repoService,
+      subscriptionSagaService,
+    );
+  });
+
+  describe('subscribe', () => {
+    it('should create repo and subscription in DB', async () => {
+      const result = await service.subscribe('test@gmail.com', 'facebook/react');
+
+      expect(result.tag).toBe('right');
+
+      const repoInDb = await db.select().from(repos);
+      expect(repoInDb).toHaveLength(1);
+      expect(repoInDb[0].repo).toBe('facebook/react');
+
+      const subscriptionInDb = await db.select().from(subscriptions);
+      expect(subscriptionInDb).toHaveLength(1);
+      expect(subscriptionInDb[0].email).toBe('test@gmail.com');
+      expect(subscriptionInDb[0].confirmed).toBe(false);
+    });
+
+    it('should return 409 if subscription already confirmed', async () => {
+      await service.subscribe('test@gmail.com', 'facebook/react');
+      await service.confirmSubscribe(
+        (await db.select().from(subscriptions))[0].token,
+      );
+
+      const result = await service.subscribe('test@gmail.com', 'facebook/react');
+
+      expect(result.tag).toBe('left');
+
+      if(E.isLeft(result)) {
+      expect(result.value.code).toBe(DomainErrorCode.SUBSCRIPTION_ALREADY_EXISTS);
+      }
+    });
+
+    it('should resend confirmation if subscription exists but not confirmed', async () => {
+      await service.subscribe('test@gmail.com', 'facebook/react');
+      const result = await service.subscribe('test@gmail.com', 'facebook/react');
+
+      expect(result.tag).toBe('right');
+
+      const subscriptionsInDb = await db.select().from(subscriptions);
+      expect(subscriptionsInDb).toHaveLength(1);
+    });
+
+    it('should reuse existing repo for different subscribers', async () => {
+      await service.subscribe('user1@gmail.com', 'facebook/react');
+      await service.subscribe('user2@gmail.com', 'facebook/react');
+
+      const reposInDb = await db.select().from(repos);
+      expect(reposInDb).toHaveLength(1);
+
+      const subscriptionsInDb = await db.select().from(subscriptions);
+      expect(subscriptionsInDb).toHaveLength(2);
+    });
+
+    it('should return 404 if github repo has no releases', async () => {
+      vi.mocked(mockTagFetcher.getTags).mockResolvedValue(
+        E.left({ code: DomainErrorCode.GITHUB_REPO_NOT_FOUND, message: 'Not found' }),
+      );
+
+      const result = await service.subscribe('test@gmail.com', 'nonexistent/repo');
+
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(DomainErrorCode.GITHUB_REPO_NOT_FOUND);
+      }
+
+      const reposInDb = await db.select().from(repos);
+      expect(reposInDb).toHaveLength(0);
+    });
+  });
+
+  describe('confirmSubscribe', () => {
+    it('should confirm subscription in DB', async () => {
+      await service.subscribe('test@gmail.com', 'facebook/react');
+      const token = (await db.select().from(subscriptions))[0].token;
+
+      const result = await service.confirmSubscribe(token);
+
+      expect(E.isRight(result)).toBe(true);
+
+      const subscriptionInDb = (await db.select().from(subscriptions))[0];
+      expect(subscriptionInDb.confirmed).toBe(true);
+    });
+
+    it('should return 404 for invalid token', async () => {
+      const result = await service.confirmSubscribe('00000000-0000-0000-0000-000000000000');
+
+      expect(E.isLeft(result)).toBe(true);
+
+      if (E.isLeft(result)) {
+        expect(result.value.code).toBe(DomainErrorCode.SUBSCRIPTION_NOT_FOUND);
+      }
+    });
+  });
+
+  describe('confirmUnsubscribe', () => {
+    it('should remove subscription from DB', async () => {
+      await service.subscribe('test@gmail.com', 'facebook/react');
+      const token = (await db.select().from(subscriptions))[0].token;
+      await service.confirmSubscribe(token);
+
+      const unsubscribeToken = (await db.select().from(subscriptions))[0].token;
+      const result = await service.confirmUnsubscribe(unsubscribeToken);
+
+      expect(E.isRight(result)).toBe(true);
+
+      const subscriptionsInDb = await db.select().from(subscriptions);
+      expect(subscriptionsInDb).toHaveLength(0);
+    });
+
+    it('should delete repo when last subscriber unsubscribes', async () => {
+      await service.subscribe('test@gmail.com', 'facebook/react');
+      const token = (await db.select().from(subscriptions))[0].token;
+      await service.confirmSubscribe(token);
+
+      const unsubscribeToken = (await db.select().from(subscriptions))[0].token;
+      await service.confirmUnsubscribe(unsubscribeToken);
+
+      const reposInDb = await db.select().from(repos);
+      expect(reposInDb).toHaveLength(0);
+    });
+
+    it('should keep repo when other subscribers exist', async () => {
+      await service.subscribe('user1@gmail.com', 'facebook/react');
+      await service.subscribe('user2@gmail.com', 'facebook/react');
+
+      const allSubs = await db.select().from(subscriptions);
+      await service.confirmSubscribe(allSubs[0].token);
+      await service.confirmUnsubscribe(allSubs[0].token);
+
+      const reposInDb = await db.select().from(repos);
+      expect(reposInDb).toHaveLength(1);
+    });
+  });
+
+  describe('getAllSubscriptionsByEmail', () => {
+    it('should return only confirmed subscriptions', async () => {
+      await service.subscribe('test@gmail.com', 'facebook/react');
+      const token = (await db.select().from(subscriptions))[0].token;
+      await service.confirmSubscribe(token);
+
+      await service.subscribe('test@gmail.com', 'microsoft/typescript');
+
+      const result = await service.getAllSubscriptionsByEmail('test@gmail.com');
+      expect(E.isRight(result)).toBe(true);
+
+      if (E.isRight(result)) {
+        expect(result.value).toHaveLength(1);
+        expect(result.value[0].repo).toBe('facebook/react');
+      }
+    });
+
+    it('should return empty array if no confirmed subscriptions', async () => {
+      await service.subscribe('test@gmail.com', 'facebook/react');
+
+      const result = await service.getAllSubscriptionsByEmail('test@gmail.com');
+
+      expect(E.isRight(result)).toBe(true);
+
+      if  (E.isRight(result)) {
+        expect(result.value).toHaveLength(0);
+      }
+    });
+  });
+});
